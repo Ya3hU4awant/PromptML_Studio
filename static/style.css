@@ -1,0 +1,311 @@
+/* PromptML Studio - Professional Styling */
+
+/* Import Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap');
+
+/* Root Variables */
+:root {
+    --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --success-gradient: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    --danger-gradient: linear-gradient(135deg, #eb3349 0%, #f45c43 100%);
+    --dark-bg: #0E1117;
+    --card-bg: #262730;
+    --text-primary: #FAFAFA;
+    --text-secondary: #B0B0B0;
+    --border-radius: 12px;
+    --shadow-lg: 0 10px 40px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+/* Global Styles */
+body {
+    font-family: 'Inter', sans-serif;
+    background: var(--dark-bg);
+    color: var(--text-primary);
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 600;
+}
+
+/* Hero Section */
+.hero-section {
+    background: var(--primary-gradient);
+    padding: 60px 40px;
+    border-radius: var(--border-radius);
+    text-align: center;
+    margin-bottom: 40px;
+    box-shadow: var(--shadow-lg);
+}
+
+.hero-title {
+    font-size: 3.5rem;
+    font-weight: 700;
+    margin-bottom: 20px;
+    background: linear-gradient(to right, #fff, #e0e0e0);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.hero-subtitle {
+    font-size: 1.4rem;
+    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: 30px;
+}
+
+/* Mode Cards */
+.mode-card {
+    background: var(--card-bg);
+    border-radius: var(--border-radius);
+    padding: 40px;
+    margin: 20px 0;
+    border: 2px solid transparent;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    box-shadow: var(--shadow-md);
+}
+
+.mode-card:hover {
+    transform: translateY(-5px);
+    border-color: #667eea;
+    box-shadow: 0 15px 50px rgba(102, 126, 234, 0.3);
+}
+
+.mode-card.active {
+    border-color: #667eea;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+}
+
+.mode-icon {
+    font-size: 3rem;
+    margin-bottom: 20px;
+}
+
+.mode-title {
+    font-size: 1.8rem;
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+.mode-description {
+    color: var(--text-secondary);
+    font-size: 1rem;
+}
+
+/* Upload Zone */
+.upload-zone {
+    border: 3px dashed #667eea;
+    border-radius: var(--border-radius);
+    padding: 60px 40px;
+    text-align: center;
+    background: rgba(102, 126, 234, 0.05);
+    transition: all 0.3s ease;
+    margin: 30px 0;
+}
+
+.upload-zone:hover {
+    background: rgba(102, 126, 234, 0.1);
+    border-color: #764ba2;
+}
+
+.upload-icon {
+    font-size: 4rem;
+    color: #667eea;
+    margin-bottom: 20px;
+}
+
+/* Buttons */
+.btn-primary {
+    background: var(--primary-gradient);
+    border: none;
+    padding: 15px 40px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: var(--shadow-md);
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(102, 126, 234, 0.4);
+}
+
+.btn-success {
+    background: var(--success-gradient);
+    border: none;
+    padding: 12px 30px;
+    border-radius: 8px;
+    font-weight: 600;
+    color: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-success:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 25px rgba(17, 153, 142, 0.4);
+}
+
+/* Metrics Cards */
+.metric-card {
+    background: var(--card-bg);
+    border-radius: var(--border-radius);
+    padding: 25px;
+    text-align: center;
+    border-left: 4px solid #667eea;
+    box-shadow: var(--shadow-md);
+    transition: all 0.3s ease;
+}
+
+.metric-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lg);
+}
+
+.metric-value {
+    font-size: 2.5rem;
+    font-weight: 700;
+    background: var(--primary-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.metric-label {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 10px;
+}
+
+/* Progress Bar */
+.progress-container {
+    background: var(--card-bg);
+    border-radius: var(--border-radius);
+    padding: 30px;
+    margin: 20px 0;
+}
+
+.progress-bar {
+    height: 8px;
+    background: var(--primary-gradient);
+    border-radius: 4px;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+
+/* Charts Container */
+.chart-container {
+    background: var(--card-bg);
+    border-radius: var(--border-radius);
+    padding: 30px;
+    margin: 20px 0;
+    box-shadow: var(--shadow-md);
+}
+
+/* Download Section */
+.download-section {
+    background: linear-gradient(135deg, rgba(17, 153, 142, 0.1) 0%, rgba(56, 239, 125, 0.1) 100%);
+    border-radius: var(--border-radius);
+    padding: 40px;
+    margin: 30px 0;
+    text-align: center;
+}
+
+/* Footer */
+.footer {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-secondary);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    margin-top: 60px;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fade-in {
+    animation: fadeIn 0.6s ease-out;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .hero-title {
+        font-size: 2.5rem;
+    }
+    
+    .hero-subtitle {
+        font-size: 1.1rem;
+    }
+    
+    .mode-card {
+        padding: 30px 20px;
+    }
+    
+    .metric-value {
+        font-size: 2rem;
+    }
+}
+
+/* Streamlit Specific Overrides */
+.stButton > button {
+    background: var(--primary-gradient) !important;
+    border: none !important;
+    border-radius: 8px !important;
+    padding: 12px 30px !important;
+    font-weight: 600 !important;
+    transition: all 0.3s ease !important;
+}
+
+.stButton > button:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 8px 30px rgba(102, 126, 234, 0.4) !important;
+}
+
+.stDownloadButton > button {
+    background: var(--success-gradient) !important;
+}
+
+/* Data Table Styling */
+.dataframe {
+    border-radius: var(--border-radius) !important;
+    overflow: hidden !important;
+}
+
+/* Success/Error Messages */
+.stSuccess {
+    background: rgba(56, 239, 125, 0.1) !important;
+    border-left: 4px solid #38ef7d !important;
+    border-radius: 8px !important;
+}
+
+.stError {
+    background: rgba(235, 51, 73, 0.1) !important;
+    border-left: 4px solid #eb3349 !important;
+    border-radius: 8px !important;
+}
+
+.stInfo {
+    background: rgba(102, 126, 234, 0.1) !important;
+    border-left: 4px solid #667eea !important;
+    border-radius: 8px !important;
+}
