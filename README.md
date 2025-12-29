@@ -279,7 +279,7 @@ This project is licensed under the MIT License - see LICENSE file for details.
 
 **Your Name**  
 AIML Diploma Final Year Project  
-[Your Email] | [LinkedIn] | [GitHub]
+[yashudawant01@gmail.com] | [Ya3hU4awant] | [GitHub]
 
 ## 🙏 Acknowledgments
 
@@ -291,7 +291,7 @@ AIML Diploma Final Year Project
 ## 📞 Support
 
 For issues or questions:
-- 📧 Email: your.email@example.com
+- 📧 Email: yashudawant01@gmail.com
 - 🐛 Issues: [GitHub Issues](your-repo-url/issues)
 - 💬 Discussions: [GitHub Discussions](your-repo-url/discussions)
 
