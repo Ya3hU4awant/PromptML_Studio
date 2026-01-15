@@ -71,3 +71,26 @@ reports/
 # OS
 Thumbs.db
 .DS_Store
+
+#ML training artifacts
+catboost_info/
+
+# Generated websites
+generated_website/
+generated_website.zip
+
+#local projects
+my-project/
+
+#Installers
+*.exe
+
+#Python cache
+__pycache__/
+*.pyc 
+
+catboost_info/
+generated_website/
+generated_website.zip
+my-project/
+*.exe
