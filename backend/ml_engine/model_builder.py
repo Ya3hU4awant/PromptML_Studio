@@ -374,3 +374,9 @@ if __name__ == "__main__":
     print(f"✅ Model trained: {result['metrics']['model_name']}")
     print(f"📊 Accuracy: {result['metrics']['accuracy']}")
     print(f"📊 F1 Score: {result['metrics']['f1_score']}")
+import joblib
+import os
+
+def save_trained_model(model):
+    os.makedirs("generated_website/model", exist_ok=True)
+    joblib.dump(model, "generated_website/model/model.pkl")

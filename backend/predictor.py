@@ -58,7 +58,7 @@ class Predictor:
         """
         if self.model is None:
             raise ValueError("No model loaded. Call load_model() first.")
-        
+        """
         # Convert input to DataFrame
         if isinstance(data, dict):
             df = pd.DataFrame([data])
@@ -68,7 +68,36 @@ class Predictor:
             df = data.copy()
         else:
             raise ValueError("Data must be DataFrame, dict, or list")
-        
+        """
+        # Convert input to DataFrame
+        if isinstance(data, dict):
+           df = pd.DataFrame([data])
+        elif isinstance(data, list):
+           df = pd.DataFrame(data)
+        else:
+           df = data.copy()
+
+        # ================= IRIS DATA FIX =================
+
+        # Drop target column if present
+        if 'Species' in df.columns:
+           df = df.drop(columns=['Species'])
+
+        # Ensure correct feature order (as used in training)
+        expected_cols = [
+        'Id',
+        'SepalLengthCm',
+        'SepalWidthCm',
+        'PetalLengthCm',
+        'PetalWidthCm'
+]
+
+       # Keep only required columns in correct order
+       df = df[expected_cols]
+
+       # =================================================
+
+
         # Make predictions using PyCaret
         try:
             # Try PyCaret prediction first

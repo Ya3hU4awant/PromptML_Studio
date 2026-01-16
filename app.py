@@ -6,6 +6,7 @@ AI-Powered AutoML Platform with Dual-Mode Interface
 import shutil
 import streamlit as st
 import pandas as pd
+import joblib
 import numpy as np
 import plotly.graph_objects as go
 from pathlib import Path
@@ -17,6 +18,9 @@ import tempfile
 from datetime import datetime
 import warnings
 warnings.filterwarnings('ignore')
+from backend.ml_engine.model_builder import save_trained_model
+from backend.ml_engine.website_generator import generate_website
+
 
 # Add backend to path
 sys.path.append(str(Path(__file__).parent))
@@ -432,6 +436,7 @@ def train_model_section(df, prompt):
                 st.success("🎉 Model trained successfully!")
                 st.balloons()
 
+<<<<<<< HEAD
                 # 🔽 DEPLOYMENT SECTION (ADD HERE)
                 st.markdown("---")
                 st.subheader("🚀 Deployment")
@@ -464,6 +469,8 @@ def train_model_section(df, prompt):
                             use_container_width=True
                         )
                 #ZIP file download ends
+=======
+>>>>>>> 3107124724cee02c94a822b63ac484919d9a14a4
                 
             except Exception as e:
                 st.error(f"❌ Error during model training: {str(e)}")
@@ -664,10 +671,10 @@ def show_results_developer():
                         zip_file.writestr('feature_importance.csv', fi_csv)
                     
                     # Create predict.py script
-                    predict_script = f'''"""
+                    predict_script = f"""                   
 Prediction Script for PromptML Studio Model
 Task Type: {result['task_type']}
-"""
+
 
 import pandas as pd
 import joblib
@@ -873,3 +880,39 @@ def main():
 
 if __name__ == "__main__":
     main()
+"""    
+
+# ===============================
+# WEBSITE GENERATION SECTION
+# ===============================
+
+if st.session_state.get("model_trained", False):
+
+    st.markdown("---")
+    st.subheader("🌍 Deploy this Model as a Website")
+
+    if st.button("🚀 Build Website using this Model", use_container_width=True):
+        with st.spinner("Generating website for your trained model..."):
+
+            save_trained_model(
+                st.session_state.model_result["model"]
+            )
+            output_dir = "generated_website"
+
+            zip_path = generate_website(
+                output_dir=output_dir,
+                task_type=st.session_state.model_result["task_type"],
+                target_column=st.session_state.model_result["target_column"],
+                model=st.session_state.model_result["model"]
+            )
+
+
+            with open(zip_path, "rb") as f:
+                st.download_button(
+                    "⬇️ Download Website ZIP",
+                    f,
+                    file_name="ml_model_website.zip",
+                    mime="application/zip"
+                )
+
+            st.success("✅ Website generated successfully!")
