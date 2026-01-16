@@ -3,6 +3,7 @@ PromptML Studio - Main Streamlit Application
 AI-Powered AutoML Platform with Dual-Mode Interface
 """
 
+import shutil
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -24,6 +25,178 @@ from backend.ml_engine.prompt_parser import PromptParser
 from backend.ml_engine.model_builder import ModelBuilder
 from backend.ml_engine.report_generator import ReportGenerator
 from backend.predictor import Predictor
+
+
+# ---------- Web App Generator Helpers ----------
+
+@st.cache_data
+def infer_types(df):
+    """Infer input types per feature column for UI generation."""
+    types = {}
+    for col in df.columns:
+        if df[col].dtype in ['int64', 'float64']:
+            types[col] = 'numeric'
+        elif df[col].dtype == 'object':
+            types[col] = 'categorical'
+        else:
+            types[col] = 'text'
+    return types
+
+
+def generate_app_template(feature_columns, feature_types, sample_data=None):
+    """Fixed template generation with real categorical options."""
+    input_code = []
+    cat_options = {}  # Store real options for categorical
+    
+    # If sample data available, extract real categorical options
+    if sample_data is not None:
+        for col in feature_columns:
+            if feature_types.get(col) == 'categorical':
+                unique_vals = sample_data[col].dropna().unique()[:10]  # Top 10 options
+                cat_options[col] = [str(v) for v in unique_vals]
+    
+    for col in feature_columns:
+        ftype = feature_types.get(col, 'numeric')
+        if ftype == 'numeric':
+            input_code.append(f"    {col} = st.number_input('{col}', value=0.0)")
+        elif ftype == 'categorical':
+            options = cat_options.get(col, ['Option1', 'Option2'])
+            options_str = repr(options)
+            input_code.append(f"    {col} = st.selectbox('{col}', {options_str})")
+        else:
+            input_code.append(f"    {col} = st.text_input('{col}')")
+    
+    input_code_str = "\n".join(input_code)
+    feature_cols_literal = "', '".join(feature_columns)
+    
+    # FIXED: Correct dictionary syntax
+    template = f'''import streamlit as st
+import pandas as pd
+import joblib
+import numpy as np
+
+@st.cache_resource
+def load_model():
+    return joblib.load("model.pkl")
+
+model = load_model()
+feature_columns = {repr(feature_columns)}
+
+st.title("🧠 ML Model Predictor")
+st.markdown("Upload CSV or use form for predictions.")
+
+# Batch prediction
+uploaded_file = st.file_uploader("Upload CSV", type="csv")
+if uploaded_file:
+    df = pd.read_csv(uploaded_file)
+    missing = set(feature_columns) - set(df.columns)
+    if missing:
+        st.error(f"Missing columns: {{missing}}")
+    else:
+        try:
+            predictions = model.predict(df[feature_columns])
+        except:
+            if TASK_TYPE == "classification":
+                from pycaret.classification import predict_model
+                preds = predict_model(model, data=df[feature_columns])
+                predictions = preds['prediction_label']
+            else:
+                from pycaret.regression import predict_model
+                preds = predict_model(model, data=df[feature_columns])
+                predictions = preds['Label']
+
+        st.write("Predictions:", predictions)
+        st.download_button("Download CSV", pd.DataFrame({{'predictions': predictions}}).to_csv(index=False), "predictions.csv")
+    st.stop()
+
+# Single prediction - FIXED SYNTAX
+st.header("🔮 Single Prediction")
+def user_input_features():
+    data = {{}}
+{input_code_str}
+    for col in feature_columns:
+        data[col] = locals()[col]
+    return pd.DataFrame([data])
+
+if st.button("🚀 Predict"):
+    df = user_input_features()
+    try:
+        pred = model.predict(df)[0]
+    except:
+        from pycaret.classification import predict_model
+        pred_df = predict_model(model, data=df)
+        pred = pred_df['prediction_label'].iloc[0]
+    st.success(f"**Prediction: {{pred}}**")
+'''
+    return template
+
+def generate_web_app_zip(model_path, feature_columns, feature_types, app_dir="temp_app"):
+    """
+    Generate ZIP with ready-to-run Streamlit app.
+    Args:
+        model_path: path to saved model.pkl
+        feature_columns: list of column names (from cleaned data)
+        feature_types: dict {'col': 'numeric'/'categorical'}
+    """
+    os.makedirs(app_dir, exist_ok=True)
+
+    # 1. app_model.py
+    app_template = generate_app_template(feature_columns, feature_types)
+    with open(os.path.join(app_dir, "app_model.py"), "w", encoding="utf-8") as f:
+        f.write(app_template)
+
+    # 2. Copy model
+    shutil.copy(model_path, os.path.join(app_dir, "model.pkl"))
+
+    # 3. requirements.txt
+    reqs = """streamlit
+pandas
+scikit-learn
+joblib
+"""
+    with open(os.path.join(app_dir, "requirements.txt"), "w", encoding="utf-8") as f:
+        f.write(reqs)
+
+    # 4. Dockerfile
+    dockerfile = """FROM python:3.9-slim
+WORKDIR /app
+COPY . .
+RUN pip install -r requirements.txt
+EXPOSE 8501
+CMD ["streamlit", "run", "app_model.py", "--server.port=8501", "--server.address=0.0.0.0"]
+"""
+    with open(os.path.join(app_dir, "Dockerfile"), "w", encoding="utf-8") as f:
+        f.write(dockerfile)
+
+    # 5. README
+    readme = f"""# My ML Model Web App
+Generated: {datetime.now().strftime('%Y-%m-%d')}
+
+## Local Run
+pip install -r requirements.txt
+streamlit run app_model.py
+
+## Docker Deploy
+docker build -t my-model-app .
+docker run -p 8501:8501 my-model-app
+"""
+    with open(os.path.join(app_dir, "README.md"), "w", encoding="utf-8") as f:
+        f.write(readme)
+
+    # 6. ZIP
+    zip_path = f"my_model_app_{datetime.now().strftime('%Y%m%d_%H%M')}.zip"
+    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
+        for root, _, files in os.walk(app_dir):
+            for file in files:
+                full_path = os.path.join(root, file)
+                arcname = os.path.relpath(full_path, app_dir)
+                zipf.write(full_path, arcname)
+
+    shutil.rmtree(app_dir)
+    return zip_path
+
+
+
 
 # Page configuration
 st.set_page_config(
@@ -258,6 +431,39 @@ def train_model_section(df, prompt):
                 
                 st.success("🎉 Model trained successfully!")
                 st.balloons()
+
+                # 🔽 DEPLOYMENT SECTION (ADD HERE)
+                st.markdown("---")
+                st.subheader("🚀 Deployment")
+
+                if "deployment_zip" not in st.session_state:
+                    st.session_state.deployment_zip = None
+
+                if st.button("🌍 Build Website for Deployment", use_container_width=True):
+                    with st.spinner("Generating deployment-ready website..."):
+                        try:
+                            from backend.deployment_engine.app_generator import generate_web_app
+
+                            zip_path = generate_web_app()
+                            st.session_state.deployment_zip = zip_path   # ✅ STORE IT
+
+                            st.success("✅ Deployment website generated!")
+
+                        except Exception as e:
+                            st.error(f"❌ Deployment generation failed: {str(e)}")
+
+                # 🔼 DEPLOYMENT SECTION END
+                #ZIP file download starts
+                if st.session_state.deployment_zip:
+                    with open(st.session_state.deployment_zip, "rb") as f:
+                        st.download_button(
+                            label="⬇️ Download Deployment Website (ZIP)",
+                            data=f,
+                            file_name=os.path.basename(st.session_state.deployment_zip),
+                            mime="application/zip",
+                            use_container_width=True
+                        )
+                #ZIP file download ends
                 
             except Exception as e:
                 st.error(f"❌ Error during model training: {str(e)}")
@@ -422,9 +628,17 @@ def show_results_developer():
         st.metric("Accuracy", f"{metrics.get('accuracy', 0):.2%}")
     else:
         st.metric("R² Score", f"{metrics.get('r2_score', 0):.4f}")
-    
+
     # Generate package
     st.markdown("### 📦 Production Package")
+    
+    # Get feature columns and types
+    feature_columns = st.session_state.uploaded_data.drop(columns=[result['target_column']]).columns.tolist()
+    feature_types = infer_types(st.session_state.uploaded_data.drop(columns=[result['target_column']]))
+    sample_data = st.session_state.uploaded_data.drop(columns=[result['target_column']])
+    
+    # Generate template
+    app_template = generate_app_template(feature_columns, feature_types, sample_data)
     
     if st.button("🔨 Generate Python Package", type="primary", use_container_width=True):
         with st.spinner("Creating production package..."):
@@ -526,7 +740,7 @@ joblib==1.3.2
 - F1 Score: {metrics.get('f1_score', 0):.2%}
 '''
                     else:
-                        readme += f'''- R² Score: {metrics.get('r2_score', 0):.4f}
+                        readme += f'''- R2 Score: {metrics.get('r2_score', 0):.4f}
 - RMSE: {metrics.get('rmse', 0):.4f}
 - MAE: {metrics.get('mae', 0):.4f}
 '''

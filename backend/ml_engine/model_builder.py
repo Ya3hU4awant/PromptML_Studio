@@ -88,7 +88,16 @@ class ModelBuilder:
         # Finalize model (train on full dataset)
         print("✅ Finalizing best model...")
         self.model = finalize_model(best_model)
+
         
+        # 🔽 SAVE MODEL FOR DEPLOYMENT
+        os.makedirs("artifacts", exist_ok=True)
+        joblib.dump(self.model, "artifacts/model.pkl")
+
+        feature_columns = [col for col in df.columns if col != target_column]
+        joblib.dump(feature_columns, "artifacts/features.pkl")
+        # 🔼
+    
         # Get test predictions
         test_data = get_config('X_test')
         test_labels = get_config('y_test')
