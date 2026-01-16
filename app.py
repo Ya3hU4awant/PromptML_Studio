@@ -465,11 +465,11 @@ import joblib
 import sys
 
 def load_model(model_path='model.pkl'):
-    """Load trained model"""
+    \"\"\"Load trained model\"\"\"
     return joblib.load(model_path)
 
 def predict(model, data_path):
-    """Make predictions on new data"""
+     \"\"\"Make predictions on new data\"\"\"
     # Load data
     df = pd.read_csv(data_path)
     
@@ -502,7 +502,7 @@ if __name__ == "__main__":
     
     print(f"✅ Predictions saved to {{output_path}}")
     print(f"📊 Predicted {{len(predictions)}} samples")
-'''
+"""
                     zip_file.writestr('predict.py', predict_script)
                     
                     # Create requirements.txt
@@ -661,42 +661,44 @@ def main():
                 else:
                     show_results_developer()
 
+                                
+                # ===============================
+                # WEBSITE GENERATION SECTION
+                # ===============================
+
+                if st.session_state.get("model_trained", False):
+
+                    st.markdown("---")
+                    st.subheader("🌍 Deploy this Model as a Website")
+
+                    if st.button("🚀 Build Website using this Model", use_container_width=True):
+                        with st.spinner("Generating website for your trained model..."):
+
+                            save_trained_model(
+                                st.session_state.model_result["model"]
+                            )
+                            output_dir = "generated_website"
+
+                            zip_path = generate_website(
+                                output_dir=output_dir,
+                                task_type=st.session_state.model_result["task_type"],
+                                target_column=st.session_state.model_result["target_column"],
+                                model=st.session_state.model_result["model"]
+                            )
+
+
+                            with open(zip_path, "rb") as f:
+                                st.download_button(
+                                    "⬇️ Download Website ZIP",
+                                    f,
+                                    file_name="ml_model_website.zip",
+                                    mime="application/zip"
+                                )
+
+                            st.success("✅ Website generated successfully!")
+
+
 
 if __name__ == "__main__":
     main()
-"""    
 
-# ===============================
-# WEBSITE GENERATION SECTION
-# ===============================
-
-if st.session_state.get("model_trained", False):
-
-    st.markdown("---")
-    st.subheader("🌍 Deploy this Model as a Website")
-
-    if st.button("🚀 Build Website using this Model", use_container_width=True):
-        with st.spinner("Generating website for your trained model..."):
-
-            save_trained_model(
-                st.session_state.model_result["model"]
-            )
-            output_dir = "generated_website"
-
-            zip_path = generate_website(
-                output_dir=output_dir,
-                task_type=st.session_state.model_result["task_type"],
-                target_column=st.session_state.model_result["target_column"],
-                model=st.session_state.model_result["model"]
-            )
-
-
-            with open(zip_path, "rb") as f:
-                st.download_button(
-                    "⬇️ Download Website ZIP",
-                    f,
-                    file_name="ml_model_website.zip",
-                    mime="application/zip"
-                )
-
-            st.success("✅ Website generated successfully!")
