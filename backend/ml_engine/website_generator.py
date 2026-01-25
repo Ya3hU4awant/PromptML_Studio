@@ -3,11 +3,13 @@ import shutil
 import joblib
 
 def generate_website(output_dir, task_type, target_column, model):
-    # 1️⃣ output folder banao
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
+    # 🔴 DELETE OLD WEBSITE FIRST (VERY IMPORTANT)
+    if os.path.exists(output_dir):
+        shutil.rmtree(output_dir)
 
-    # 2️⃣ Simple Streamlit app code
+    os.makedirs(output_dir)
+
+    # 1️⃣ Streamlit app code
     app_code = f"""
 import streamlit as st
 import joblib
@@ -25,19 +27,18 @@ if st.button("Predict"):
     st.success(f"Prediction: {{prediction}}")
 """
 
-    # 3️⃣ app.py save karo
+    # 2️⃣ Save app.py
     with open(os.path.join(output_dir, "app.py"), "w") as f:
         f.write(app_code)
 
-    # 4️⃣ model save karo
+    # 3️⃣ Save ONLY ONE model.pkl (in root)
     joblib.dump(model, os.path.join(output_dir, "model.pkl"))
 
-    # 5️⃣ ZIP banao
+    # 4️⃣ ZIP the folder
     zip_path = shutil.make_archive(
         base_name=output_dir,
         format="zip",
         root_dir=output_dir
     )
 
-    # 6️⃣ RETURN ZIP PATH (🔥 MOST IMPORTANT)
     return zip_path

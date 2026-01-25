@@ -883,9 +883,6 @@ def main():
                     if st.button("🚀 Build Website using this Model", use_container_width=True):
                         with st.spinner("Generating website for your trained model..."):
 
-                            save_trained_model(
-                                st.session_state.model_result["model"]
-                            )
                             output_dir = "generated_website"
 
                             zip_path = generate_website(
