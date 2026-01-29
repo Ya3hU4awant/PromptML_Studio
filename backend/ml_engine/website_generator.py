@@ -1,43 +1,90 @@
 import os
 import shutil
 import joblib
+from datetime import datetime
 
-def generate_website(output_dir, task_type, target_column, model):
-    # 1️⃣ output folder banao
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
+def generate_website(output_dir="generated_website"):
+    os.makedirs(output_dir, exist_ok=True)
 
-    # 2️⃣ Simple Streamlit app code
+    # Load artifacts
+    model = joblib.load("artifacts/model.pkl")
+    features = joblib.load("artifacts/features.pkl")
+    task_type = joblib.load("artifacts/task_type.pkl")
+
+    # Streamlit app template (AUTO UI)
     app_code = f"""
 import streamlit as st
+import pandas as pd
 import joblib
 
-st.set_page_config(page_title="My ML Website")
+st.set_page_config(page_title="PromptML Deployed App")
 
-st.title("My Generated ML App")
+st.title("🚀 PromptML Deployed Model")
 
-model = joblib.load("model.pkl")
+try:
+    model = joblib.load("model.pkl")
+except ModuleNotFoundError:
+    st.error("❌ PyCaret is missing. Install dependencies from requirements.txt")
+    st.stop()
+except Exception as e:
+    st.error(f"❌ Model loading failed: {{str(e)}}")
+    st.stop()
 
-value = st.number_input("Enter input value")
+features = {features}
+task_type = "{task_type}"
+
+st.subheader("🔢 Enter Input Values")
+
+def user_inputs():
+    data = {{}}
+    for col in features:
+        data[col] = st.number_input(col, value=0.0)
+    return pd.DataFrame([data])
+
+df = user_inputs()
 
 if st.button("Predict"):
-    prediction = model.predict([[value]])
-    st.success(f"Prediction: {{prediction}}")
+    try:
+        pred = model.predict(df)
+        st.success(f"Prediction: {{pred[0]}}")
+    except:
+        try:
+            if task_type == "classification":
+                from pycaret.classification import predict_model
+                preds = predict_model(model, data=df)
+                st.success(f"Prediction: {{preds['prediction_label'].iloc[0]}}")
+            else:
+                from pycaret.regression import predict_model
+                preds = predict_model(model, data=df)
+                st.success(f"Prediction: {{preds['Label'].iloc[0]}}")
+        except Exception as e:
+            st.error(f"Prediction failed: {{e}}")
+st.info("ℹ️ If you face errors, run: pip install -r requirements.txt")
+
 """
 
-    # 3️⃣ app.py save karo
-    with open(os.path.join(output_dir, "app.py"), "w") as f:
+
+    # Write app.py
+    with open(os.path.join(output_dir, "app.py"), "w", encoding="utf-8") as f:
         f.write(app_code)
 
-    # 4️⃣ model save karo
-    joblib.dump(model, os.path.join(output_dir, "model.pkl"))
 
-    # 5️⃣ ZIP banao
-    zip_path = shutil.make_archive(
-        base_name=output_dir,
-        format="zip",
-        root_dir=output_dir
-    )
+    # Copy model.pkl
+    shutil.copy("artifacts/model.pkl", os.path.join(output_dir, "model.pkl"))
 
-    # 6️⃣ RETURN ZIP PATH (🔥 MOST IMPORTANT)
+    # Create requirements.txt
+    requirements =  """streamlit
+pandas
+numpy
+scikit-learn
+joblib
+pycaret==3.1.0
+"""
+
+    with open(os.path.join(output_dir, "requirements.txt"), "w") as f:
+        f.write(requirements)
+
+    # ZIP everything
+    zip_path = shutil.make_archive(output_dir, "zip", output_dir)
+
     return zip_path
