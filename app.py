@@ -24,6 +24,7 @@ sys.path.append(str(Path(__file__).parent))
 from backend.ml_engine.prompt_parser import PromptParser
 from backend.ml_engine.model_builder import ModelBuilder
 from backend.ml_engine.report_generator import ReportGenerator
+from backend.ml_engine.website_generator import generate_website
 from backend.predictor import Predictor
 
 
@@ -396,7 +397,18 @@ def train_model_section(df, prompt):
                     target_column=task_info['target_column'],
                     task_type=task_info['task_type']
                 )
-                
+                # Save artifacts
+
+                from backend.ml_engine.model_persistence import save_artifacts
+
+                features = df.drop(columns=[task_info['target_column']]).columns.tolist()
+
+                save_artifacts(
+                    model=result['model'],
+                    feature_columns=features,
+                    task_type=task_info['task_type']
+                )
+
                 progress_bar.progress(70)
                 
                 # Step 3: Generate visualizations
@@ -431,39 +443,6 @@ def train_model_section(df, prompt):
                 
                 st.success("🎉 Model trained successfully!")
                 st.balloons()
-
-                # 🔽 DEPLOYMENT SECTION (ADD HERE)
-                st.markdown("---")
-                st.subheader("🚀 Deployment")
-
-                if "deployment_zip" not in st.session_state:
-                    st.session_state.deployment_zip = None
-
-                if st.button("🌍 Build Website for Deployment", use_container_width=True):
-                    with st.spinner("Generating deployment-ready website..."):
-                        try:
-                            from backend.deployment_engine.app_generator import generate_web_app
-
-                            zip_path = generate_web_app()
-                            st.session_state.deployment_zip = zip_path   # ✅ STORE IT
-
-                            st.success("✅ Deployment website generated!")
-
-                        except Exception as e:
-                            st.error(f"❌ Deployment generation failed: {str(e)}")
-
-                # 🔼 DEPLOYMENT SECTION END
-                #ZIP file download starts
-                if st.session_state.deployment_zip:
-                    with open(st.session_state.deployment_zip, "rb") as f:
-                        st.download_button(
-                            label="⬇️ Download Deployment Website (ZIP)",
-                            data=f,
-                            file_name=os.path.basename(st.session_state.deployment_zip),
-                            mime="application/zip",
-                            use_container_width=True
-                        )
-                #ZIP file download ends
                 
             except Exception as e:
                 st.error(f"❌ Error during model training: {str(e)}")
@@ -664,9 +643,10 @@ def show_results_developer():
                         zip_file.writestr('feature_importance.csv', fi_csv)
                     
                     # Create predict.py script
+                    task_type = result['task_type']
                     predict_script = f'''"""
 Prediction Script for PromptML Studio Model
-Task Type: {result['task_type']}
+Task Type: {task_type}
 """
 
 import pandas as pd
@@ -674,17 +654,17 @@ import joblib
 import sys
 
 def load_model(model_path='model.pkl'):
-    \"\"\"Load trained model\"\"\"
+    """Load trained model"""
     return joblib.load(model_path)
 
 def predict(model, data_path):
-     \"\"\"Make predictions on new data\"\"\"
+    """Make predictions on new data"""
     # Load data
     df = pd.read_csv(data_path)
     
     # Make predictions
     try:
-        from pycaret.{result['task_type']} import predict_model
+        from pycaret.{task_type} import predict_model
         predictions = predict_model(model, data=df)
     except:
         # Fallback to sklearn
@@ -709,75 +689,35 @@ if __name__ == "__main__":
     output_path = "predictions_output.csv"
     predictions.to_csv(output_path, index=False)
     
-    print(f"✅ Predictions saved to {{output_path}}")
-    print(f"📊 Predicted {{len(predictions)}} samples")
-"""
+    print(f"Predictions saved to {{output_path}}")
+    print(f"Predicted {{len(predictions)}} samples")
+'''
                     zip_file.writestr('predict.py', predict_script)
                     
                     # Create requirements.txt
-                    requirements = '''pandas==2.0.3
-numpy==1.24.3
-scikit-learn==1.3.0
-pycaret==3.1.0
-joblib==1.3.2
-'''
+                    requirements = "pandas==2.0.3\nnumpy==1.24.3\nscikit-learn==1.3.0\npycaret==3.1.0\njoblib==1.3.2\n"
                     zip_file.writestr('requirements.txt', requirements)
                     
                     # Create README
-                    readme = f'''# PromptML Studio - Production Model Package
-
-## Model Information
-- **Task Type**: {result['task_type'].title()}
-- **Model**: {metrics.get('model_name', 'Unknown')}
-- **Generated**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-
-## Performance Metrics
-'''
-                    if result['task_type'] == 'classification':
-                        readme += f'''- Accuracy: {metrics.get('accuracy', 0):.2%}
-- Precision: {metrics.get('precision', 0):.2%}
-- Recall: {metrics.get('recall', 0):.2%}
-- F1 Score: {metrics.get('f1_score', 0):.2%}
-'''
-                    else:
-                        readme += f'''- R2 Score: {metrics.get('r2_score', 0):.4f}
-- RMSE: {metrics.get('rmse', 0):.4f}
-- MAE: {metrics.get('mae', 0):.4f}
-'''
+                    task_type_title = result['task_type'].title()
+                    model_name = metrics.get('model_name', 'Unknown')
+                    gen_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                     
-                    readme += '''
-## Installation
-
-```bash
-pip install -r requirements.txt
-```
-
-## Usage
-
-### Make Predictions
-
-```bash
-python predict.py your_data.csv
-```
-
-### Load Model in Python
-
-```python
-import joblib
-model = joblib.load('model.pkl')
-```
-
-## Files Included
-- `model.pkl` - Trained model
-- `metrics.pkl` - Performance metrics
-- `feature_importance.csv` - Feature importance scores
-- `predict.py` - Prediction script
-- `requirements.txt` - Python dependencies
-- `README.md` - This file
-
----
-Generated by PromptML Studio
-'''
+                    readme = f"# PromptML Studio - Production Model Package\n\n## Model Information\n- **Task Type**: {task_type_title}\n- **Model**: {model_name}\n- **Generated**: {gen_time}\n\n## Performance Metrics\n"
+                    
+                    if result['task_type'] == 'classification':
+                        accuracy = metrics.get('accuracy', 0)
+                        precision = metrics.get('precision', 0)
+                        recall = metrics.get('recall', 0)
+                        f1 = metrics.get('f1_score', 0)
+                        readme += f"- Accuracy: {accuracy:.2%}\n- Precision: {precision:.2%}\n- Recall: {recall:.2%}\n- F1 Score: {f1:.2%}\n"
+                    else:
+                        r2 = metrics.get('r2_score', 0)
+                        rmse = metrics.get('rmse', 0)
+                        mae = metrics.get('mae', 0)
+                        readme += f"- R2 Score: {r2:.4f}\n- RMSE: {rmse:.4f}\n- MAE: {mae:.4f}\n"
+                    
+                    readme += "\n## Installation\n\n```bash\npip install -r requirements.txt\n```\n\n## Usage\n\n### Make Predictions\n\n```bash\npython predict.py your_data.csv\n```\n\n### Load Model in Python\n\n```python\nimport joblib\nmodel = joblib.load('model.pkl')\n```\n\n## Files Included\n- `model.pkl` - Trained model\n- `metrics.pkl` - Performance metrics\n- `feature_importance.csv` - Feature importance scores\n- `predict.py` - Prediction script\n- `requirements.txt` - Python dependencies\n- `README.md` - This file\n\n---\nGenerated by PromptML Studio\n"
                     zip_file.writestr('README.md', readme)
                 
                 # Download button
@@ -875,36 +815,23 @@ def main():
                 # WEBSITE GENERATION SECTION
                 # ===============================
 
-                if st.session_state.get("model_trained", False):
+                from backend.ml_engine.website_generator import generate_website
 
+                if st.session_state.get("model_trained"):
                     st.markdown("---")
-                    st.subheader("🌍 Deploy this Model as a Website")
+                    st.subheader("🌍 Deploy as Website")
 
-                    if st.button("🚀 Build Website using this Model", use_container_width=True):
-                        with st.spinner("Generating website for your trained model..."):
-
-                            output_dir = "generated_website"
-
-                            zip_path = generate_website(
-                                output_dir=output_dir,
-                                task_type=st.session_state.model_result["task_type"],
-                                target_column=st.session_state.model_result["target_column"],
-                                model=st.session_state.model_result["model"]
-                            )
-
-
+                    if st.button("🚀 Build Website", type="primary", use_container_width=True):
+                        with st.spinner("Generating website..."):
+                            zip_path = generate_website()
                             with open(zip_path, "rb") as f:
                                 st.download_button(
                                     "⬇️ Download Website ZIP",
                                     f,
-                                    file_name="ml_model_website.zip",
+                                    file_name="promptml_website.zip",
                                     mime="application/zip"
                                 )
-
-                            st.success("✅ Website generated successfully!")
-
-
+                            st.success("Website generated successfully!")
 
 if __name__ == "__main__":
     main()
-
