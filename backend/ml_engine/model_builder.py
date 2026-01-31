@@ -88,7 +88,16 @@ class ModelBuilder:
         # Finalize model (train on full dataset)
         print("✅ Finalizing best model...")
         self.model = finalize_model(best_model)
+
         
+        # 🔽 SAVE MODEL FOR DEPLOYMENT
+        os.makedirs("artifacts", exist_ok=True)
+        joblib.dump(self.model, "artifacts/model.pkl")
+
+        feature_columns = [col for col in df.columns if col != target_column]
+        joblib.dump(feature_columns, "artifacts/features.pkl")
+        # 🔼
+    
         # Get test predictions
         test_data = get_config('X_test')
         test_labels = get_config('y_test')
@@ -365,3 +374,9 @@ if __name__ == "__main__":
     print(f"✅ Model trained: {result['metrics']['model_name']}")
     print(f"📊 Accuracy: {result['metrics']['accuracy']}")
     print(f"📊 F1 Score: {result['metrics']['f1_score']}")
+import joblib
+import os
+
+def save_trained_model(model):
+    os.makedirs("generated_website/model", exist_ok=True)
+    joblib.dump(model, "generated_website/model/model.pkl")
