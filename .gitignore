@@ -71,3 +71,9 @@ reports/
 # OS
 Thumbs.db
 .DS_Store
+
+# ML training artifacts
+catboost_info/
+*.tfevents
+*.tsv
+
