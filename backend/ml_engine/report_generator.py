@@ -59,7 +59,7 @@ class ReportGenerator:
             charts.update(self._create_classification_charts(metrics, predictions))
         elif task_type == "clustering":
             charts = {}
-            charts["clusters"] = self.generate_clustering_visualization(viz_data)
+            charts["clusters"] = self.generate_clustering_visualization(predictions)
             return charts
         else:
             charts.update(self._create_regression_charts(metrics, predictions))
