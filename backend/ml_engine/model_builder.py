@@ -25,30 +25,33 @@ class ModelBuilder:
         self.metrics = {}
         self.feature_importance = None
         self.setup_config = None
-        
+
     def build_model(
-        self, 
-        df: pd.DataFrame, 
-        target_column: str,
-        task_type: str = 'classification',
-        test_size: float = 0.2,
-        n_models: int = 10
-    ) -> Dict[str, Any]:
-        """
-        Build and train ML model using PyCaret AutoML
-        """
+        self,
+        df,
+        target_column=None,
+        task_type='classification',
+        test_size=0.2,
+        n_models=10
+    ):
         self.task_type = task_type
-        
+
         try:
             if task_type == 'classification':
                 return self._build_classification_model(df, target_column, test_size, n_models)
+
             elif task_type == 'regression':
                 return self._build_regression_model(df, target_column, test_size, n_models)
+
+            elif task_type == 'clustering':
+                return self._build_clustering_model(df)
+
             else:
                 raise ValueError(f"Unsupported task type: {task_type}")
-                
+
         except Exception as e:
             raise Exception(f"Model building failed: {str(e)}")
+    
     
     def _build_classification_model(
         self, 
@@ -189,6 +192,60 @@ class ModelBuilder:
             'task_type': 'regression'
         }
     
+    def _build_clustering_model(self, df):
+        """
+        Build clustering model using KMeans
+        """
+        from sklearn.cluster import KMeans
+        from sklearn.preprocessing import StandardScaler
+        from sklearn.decomposition import PCA
+
+        # Only numeric columns
+        X = df.select_dtypes(include=['int64', 'float64'])
+
+        if X.shape[1] < 2:
+            raise ValueError("Clustering requires at least 2 numeric features")
+
+        # Scale data
+        scaler = StandardScaler()
+        X_scaled = scaler.fit_transform(X)
+
+        # Auto choose k (simple heuristic)
+        k = min(5, len(X_scaled) // 10 + 1)
+
+        model = KMeans(n_clusters=k, random_state=42)
+        clusters = model.fit_predict(X_scaled)
+
+        # Save artifacts
+        self.model = model
+        self.preprocessor = scaler
+
+        # Add cluster labels
+        df_with_clusters = df.copy()
+        df_with_clusters["cluster"] = clusters
+
+        # PCA for visualization
+        pca = PCA(n_components=2)
+        components = pca.fit_transform(X_scaled)
+
+        viz_df = df_with_clusters.copy()
+        viz_df["pca_1"] = components[:, 0]
+        viz_df["pca_2"] = components[:, 1]
+
+        self.metrics = {
+            "n_clusters": k,
+            "algorithm": "KMeans"
+        }
+
+        return {
+            "model": model,
+            "metrics": self.metrics,
+            "predictions": df_with_clusters,
+            "viz_data": viz_df,
+            "task_type": "clustering"
+        }
+
+
     def _extract_classification_metrics(
         self, 
         predictions: pd.DataFrame,
