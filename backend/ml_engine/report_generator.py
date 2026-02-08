@@ -57,6 +57,10 @@ class ReportGenerator:
         # Task-specific charts
         if task_type == 'classification':
             charts.update(self._create_classification_charts(metrics, predictions))
+        elif task_type == "clustering":
+            charts = {}
+            charts["clusters"] = self.generate_clustering_visualization(viz_data)
+            return charts
         else:
             charts.update(self._create_regression_charts(metrics, predictions))
         
@@ -200,6 +204,20 @@ class ReportGenerator:
             charts['residuals'] = self._create_residuals_chart(predictions)
         
         return charts
+
+    #Visualization for clustering
+    def generate_clustering_visualization(self, viz_df):
+        import plotly.express as px
+
+        fig = px.scatter(
+            viz_df,
+            x="pca_1",
+            y="pca_2",
+            color="cluster",
+            title="Cluster Visualization (PCA)"
+        )
+        return fig
+
     
     def _create_actual_vs_predicted_chart(self, predictions: pd.DataFrame) -> go.Figure:
         """Create actual vs predicted scatter plot"""
