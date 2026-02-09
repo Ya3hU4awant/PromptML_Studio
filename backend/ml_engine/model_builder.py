@@ -343,17 +343,13 @@ class ModelBuilder:
         self.model = joblib.load(model_path)
         return self.model
 
-
-def build_model(
+def build_model_wrapper(
     df: pd.DataFrame,
     target_column: str,
     task_type: str = 'classification'
-) -> Tuple[Any, Dict, pd.DataFrame]:
-    """Convenience function to build model"""
+):
     builder = ModelBuilder()
-    result = builder.build_model(df, target_column, task_type)
-    
-    return result['model'], result['metrics'], result['feature_importance']
+    return builder.build_model(df, target_column, task_type)
 
 
 if __name__ == "__main__":

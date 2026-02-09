@@ -2,6 +2,7 @@
 PromptML Studio - Main Streamlit Application
 AI-Powered AutoML Platform with Dual-Mode Interface
 """
+import requests
 
 import shutil
 import streamlit as st
@@ -251,7 +252,7 @@ def show_mode_selector():
     col1, col2 = st.columns(2)
     
     with col1:
-        if st.button("📱 No-Code Mode", use_container_width=True, type="primary"):
+        if st.button("📱 No-Code Mode", width="stretch", type="primary"):
             st.session_state.mode = "no-code"
             st.rerun()
         
@@ -268,7 +269,7 @@ def show_mode_selector():
         """, unsafe_allow_html=True)
     
     with col2:
-        if st.button("💻 Developer Mode", use_container_width=True, type="secondary"):
+        if st.button("💻 Developer Mode", width="stretch", type="secondary"):
             st.session_state.mode = "developer"
             st.rerun()
         
@@ -299,7 +300,7 @@ def upload_data_section():
     # Sample data option
     col1, col2 = st.columns(2)
     with col1:
-        if st.button("📝 Use House Prices Sample", use_container_width=True):
+        if st.button("📝 Use House Prices Sample", width="stretch"):
             sample_path = Path(__file__).parent / "static" / "sample_data" / "house_prices.csv"
             if sample_path.exists():
                 st.session_state.uploaded_data = pd.read_csv(sample_path)
@@ -308,7 +309,7 @@ def upload_data_section():
                 st.rerun()
     
     with col2:
-        if st.button("📝 Use Customer Churn Sample", use_container_width=True):
+        if st.button("📝 Use Customer Churn Sample", width="stretch"):
             sample_path = Path(__file__).parent / "static" / "sample_data" / "customer_churn.csv"
             if sample_path.exists():
                 st.session_state.uploaded_data = pd.read_csv(sample_path)
@@ -324,18 +325,23 @@ def upload_data_section():
             
             # Show preview
             with st.expander("📋 Data Preview", expanded=True):
-                st.dataframe(df.head(10), use_container_width=True)
+                st.dataframe(df.head(10), use_container_width="stretch")
                 
                 # Data info
                 col1, col2, col3, col4 = st.columns(4)
+
                 with col1:
                     st.metric("Total Rows", len(df))
+
                 with col2:
                     st.metric("Total Columns", len(df.columns))
+
                 with col3:
                     st.metric("Numeric Columns", len(df.select_dtypes(include=[np.number]).columns))
+
                 with col4:
                     st.metric("Categorical Columns", len(df.select_dtypes(include=['object']).columns))
+
         
         except Exception as e:
             st.error(f"❌ Error loading file: {str(e)}")
@@ -345,7 +351,7 @@ def upload_data_section():
         st.success(f"✅ Data loaded! {len(df)} rows, {len(df.columns)} columns")
         
         with st.expander("📋 Data Preview", expanded=False):
-            st.dataframe(df.head(10), use_container_width=True)
+            st.dataframe(df.head(10), width="stretch")
     
     return st.session_state.uploaded_data
 
@@ -832,6 +838,77 @@ def main():
                                     mime="application/zip"
                                 )
                             st.success("Website generated successfully!")
+    
+
+            
+
+                # ===== NLP API SECTION =====
+                st.markdown("## 🔍 NLP Text Analysis")
+
+                text_input = st.text_area(
+                    "Enter your text",
+                    placeholder="I love PromptML project"
+                )
+
+                if st.button("Analyze"):
+                    if not text_input.strip():
+                        st.warning("Please enter text")
+                    else:
+                        try:
+                            response = requests.post(
+                                "http://127.0.0.1:8000/predict",
+                                json={"text": text_input},
+                                timeout=5
+                            )
+
+                            st.write("DEBUG status:", response.status_code)
+
+                            if response.status_code == 200:
+                                
+                                
+
+                                result = response.json()
+                                st.success("Analysis Result 👇")
+                                st.write("Text:", result["text"])
+                                st.write("Label:",result["label"])
+                                st.write("Confidence:", result["confidence"])
+                                
+                        
+                            
+                            
+
+                                label = result.get("label")
+                                conf = result.get("confidence", 0)
+
+                                st.success("Done ✅")
+
+                                if conf >= 0.6:
+                                    st.write("**Label:**", label)
+                                else:
+                                    st.write("**Label:** UNCERTAIN")
+
+                                    st.write("**Confidence:**", f"{conf*100:.2f}%")
+
+                                if conf < 0.6:
+                                    st.warning("Neutral / Confused 😐")
+                                elif label == "POSITIVE":
+                                    st.success("Positive Sentiment 😊")
+                                elif label == "NEGATIVE":
+                                    st.error("Negative Sentiment 😞")
+                                else:
+                                    st.warning("Neutral / Uncertain Sentiment 🤔")
+                            else:
+                                st.error("API Error")
+            
+                        except requests.exceptions.ConnectionError:
+                            st.error("❌ Backend API running nahi hai (FastAPI start karo)")
+
+                        except requests.exceptions.Timeout:
+                            st.error("⏳ API response slow hai, thodi der baad try karo")
+
+                        except Exception as e:
+                            print(traceback.format_exc)
+                            st.error(f"Unexpected Error: {e}")
 
 if __name__ == "__main__":
     main()
