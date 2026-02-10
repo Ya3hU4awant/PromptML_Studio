@@ -8,12 +8,15 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 from pathlib import Path
+import streamlit as st
+from nlp_api import analyze_prompt
 import sys
 import os
 import io
 import zipfile
 import tempfile
 from datetime import datetime
+from nlp_api import analyze_prompt
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -24,6 +27,24 @@ from backend.ml_engine.prompt_parser import PromptParser
 from backend.ml_engine.model_builder import ModelBuilder
 from backend.ml_engine.report_generator import ReportGenerator
 from backend.predictor import Predictor
+
+st.title("Prompt Analyzer")
+
+user_prompt = st.text_input("Enter your prompt:", key="user_prompt")
+
+if st.button("Analyze", key="analyze_user_input"):
+    result = analyze_prompt(user_input)
+    st.write("Result:", result)
+
+
+st.title("PromptML Studio - NLP Analyzer")
+
+user_prompt = st.text_input("Enter your prompt:")
+
+if st.button("Analyze", key="analyze_user_prompt"):
+    result = analyze_prompt(user_prompt)
+    st.success(f"Detected Task: {result}")
+
 
 # Page configuration
 st.set_page_config(
