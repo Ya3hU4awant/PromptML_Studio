@@ -17,6 +17,7 @@ import zipfile
 import tempfile
 from datetime import datetime
 import warnings
+import traceback
 warnings.filterwarnings('ignore')
 
 # Add backend to path
@@ -457,22 +458,26 @@ def train_model_section(df, prompt):
 
 def show_results_no_code():
     """Display results for no-code mode"""
+
     if not st.session_state.model_trained or st.session_state.model_result is None:
         return
     
     result = st.session_state.model_result
-    
+    metrics = result.get("metrics", {})
+    charts = result.get("charts", {})
+
     st.markdown("---")
     st.markdown("## 📊 Model Results")
-    
-    # Metrics
-    st.markdown("### 🎯 Performance Metrics")
-    
-    metrics = result['metrics']
-    
+
+    # ===============================
+    # CLASSIFICATION
+    # ===============================
     if result['task_type'] == 'classification':
+
+        st.markdown("### 🎯 Performance Metrics")
+
         col1, col2, col3, col4 = st.columns(4)
-        
+
         with col1:
             st.metric("Accuracy", f"{metrics.get('accuracy', 0):.2%}")
         with col2:
@@ -481,117 +486,145 @@ def show_results_no_code():
             st.metric("Recall", f"{metrics.get('recall', 0):.2%}")
         with col4:
             st.metric("F1 Score", f"{metrics.get('f1_score', 0):.2%}")
-    
-    else:  # regression
-        col1, col2, col3, col4 = st.columns(4)
-        
+
+        st.info(f"🤖 Best Model: **{metrics.get('model_name', 'Unknown')}**")
+
+        st.markdown("### 📈 Visualizations")
+
+        if 'feature_importance' in charts:
+            st.plotly_chart(charts['feature_importance'], use_container_width=True)
+
+        col1, col2 = st.columns(2)
+
         with col1:
-            st.metric("R² Score", f"{metrics.get('r2_score', 0):.4f}")
+            if 'confusion_matrix' in charts:
+                st.plotly_chart(charts['confusion_matrix'], use_container_width=True)
+
+        with col2:
+            if 'metrics_comparison' in charts:
+                st.plotly_chart(charts['metrics_comparison'], use_container_width=True)
+
+    # ===============================
+    # REGRESSION
+    # ===============================
+    elif result['task_type'] == 'regression':
+
+        st.markdown("### 🎯 Performance Metrics")
+
+        col1, col2, col3, col4 = st.columns(4)
+
+        with col1:
+            st.metric("R2 Score", f"{metrics.get('r2_score', 0):.4f}")
         with col2:
             st.metric("RMSE", f"{metrics.get('rmse', 0):.2f}")
         with col3:
             st.metric("MAE", f"{metrics.get('mae', 0):.2f}")
         with col4:
             st.metric("MSE", f"{metrics.get('mse', 0):.2f}")
-    
-    # Model info
-    st.info(f"🤖 Best Model: **{metrics.get('model_name', 'Unknown')}**")
-    
-    # Visualizations
-    st.markdown("### 📈 Visualizations")
-    
-    charts = result['charts']
-    
-    # Feature importance
-    if 'feature_importance' in charts:
-        st.plotly_chart(charts['feature_importance'], use_container_width=True)
-    
-    # Task-specific charts
-    if result['task_type'] == 'classification':
+
+        st.info(f"🤖 Best Model: **{metrics.get('model_name', 'Unknown')}**")
+
+        st.markdown("### 📈 Visualizations")
+
         col1, col2 = st.columns(2)
-        
-        with col1:
-            if 'confusion_matrix' in charts:
-                st.plotly_chart(charts['confusion_matrix'], use_container_width=True)
-        
-        with col2:
-            if 'metrics_comparison' in charts:
-                st.plotly_chart(charts['metrics_comparison'], use_container_width=True)
-    
-    else:  # regression
-        col1, col2 = st.columns(2)
-        
+
         with col1:
             if 'actual_vs_predicted' in charts:
                 st.plotly_chart(charts['actual_vs_predicted'], use_container_width=True)
-        
+
         with col2:
             if 'residuals' in charts:
                 st.plotly_chart(charts['residuals'], use_container_width=True)
-    
-    # Model comparison
-    if 'comparison' in result and not result['comparison'].empty:
-        with st.expander("📊 Model Comparison", expanded=False):
-            st.dataframe(result['comparison'], use_container_width=True)
-    
-    # Download section
+
+    # ===============================
+    # CLUSTERING
+    # ===============================
+    elif result['task_type'] == 'clustering':
+
+        st.markdown("### 🔵 Clustering Results")
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.metric("Number of Clusters", metrics.get("n_clusters", 0))
+
+        with col2:
+            st.metric("Algorithm", metrics.get("algorithm", "KMeans"))
+
+        st.markdown("### 📋 Clustered Data Preview")
+        st.dataframe(result['predictions'].head(), use_container_width=True)
+
+        # PCA Visualization if available
+        if "viz_data" in result:
+            import plotly.express as px
+
+            fig = px.scatter(
+                result["viz_data"],
+                x="pca_1",
+                y="pca_2",
+                color="cluster",
+                title="Cluster Visualization (PCA Projection)"
+            )
+
+            st.plotly_chart(fig, use_container_width=True)
+
+    # ===============================
+    # DOWNLOAD SECTION
+    # ===============================
     st.markdown("### 📥 Download Results")
-    
+
     col1, col2 = st.columns(2)
-    
+
+    # Download Predictions
     with col1:
-        # Generate PDF
-        if st.button("📄 Generate PDF Report", use_container_width=True):
-            with st.spinner("Generating PDF report..."):
-                try:
-                    # Create temp file
-                    with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_file:
-                        pdf_path = tmp_file.name
-                    
-                    # Generate PDF
-                    dataset_info = {
-                        'n_samples': len(st.session_state.uploaded_data),
-                        'n_features': len(st.session_state.uploaded_data.columns) - 1,
-                        'target_column': result['target_column']
-                    }
-                    
-                    result['report_generator'].generate_pdf_report(
-                        output_path=pdf_path,
-                        metrics=result['metrics'],
-                        feature_importance=result['feature_importance'],
-                        task_type=result['task_type'],
-                        dataset_info=dataset_info
-                    )
-                    
-                    # Read PDF
-                    with open(pdf_path, 'rb') as f:
-                        pdf_data = f.read()
-                    
-                    # Download button
-                    st.download_button(
-                        label="⬇️ Download PDF Report",
-                        data=pdf_data,
-                        file_name=f"promptml_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
-                        mime="application/pdf",
-                        use_container_width=True
-                    )
-                    
-                    # Cleanup
-                    os.unlink(pdf_path)
-                    
-                except Exception as e:
-                    st.error(f"Error generating PDF: {str(e)}")
-    
+        if "predictions" in result:
+            predictions_csv = result['predictions'].to_csv(index=False)
+            st.download_button(
+                label="📊 Download Predictions CSV",
+                data=predictions_csv,
+                file_name=f"predictions_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                mime="text/csv",
+                use_container_width=True
+            )
+
+    # Generate PDF (only for supervised tasks)
     with col2:
-        # Download predictions
-        predictions_csv = result['predictions'].to_csv(index=False)
-        st.download_button(
-            label="📊 Download Predictions CSV",
-            data=predictions_csv,
-            file_name=f"predictions_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
-            mime="text/csv",
-            use_container_width=True
-        )
+        if result['task_type'] in ['classification', 'regression']:
+            if st.button("📄 Generate PDF Report", use_container_width=True):
+                with st.spinner("Generating PDF report..."):
+                    try:
+                        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_file:
+                            pdf_path = tmp_file.name
+
+                        dataset_info = {
+                            'n_samples': len(st.session_state.uploaded_data),
+                            'n_features': len(st.session_state.uploaded_data.columns),
+                            'target_column': result.get('target_column')
+                        }
+
+                        result['report_generator'].generate_pdf_report(
+                            output_path=pdf_path,
+                            metrics=result['metrics'],
+                            feature_importance=result.get('feature_importance'),
+                            task_type=result['task_type'],
+                            dataset_info=dataset_info
+                        )
+
+                        with open(pdf_path, 'rb') as f:
+                            pdf_data = f.read()
+
+                        st.download_button(
+                            label="⬇️ Download PDF Report",
+                            data=pdf_data,
+                            file_name=f"promptml_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
+                            mime="application/pdf",
+                            use_container_width=True
+                        )
+
+                        os.unlink(pdf_path)
+
+                    except Exception as e:
+                        st.error(f"Error generating PDF: {str(e)}")
 
 
 def show_results_developer():
@@ -839,76 +872,5 @@ def main():
                                 )
                             st.success("Website generated successfully!")
     
-
-            
-
-                # ===== NLP API SECTION =====
-                st.markdown("## 🔍 NLP Text Analysis")
-
-                text_input = st.text_area(
-                    "Enter your text",
-                    placeholder="I love PromptML project"
-                )
-
-                if st.button("Analyze"):
-                    if not text_input.strip():
-                        st.warning("Please enter text")
-                    else:
-                        try:
-                            response = requests.post(
-                                "http://127.0.0.1:8000/predict",
-                                json={"text": text_input},
-                                timeout=5
-                            )
-
-                            st.write("DEBUG status:", response.status_code)
-
-                            if response.status_code == 200:
-                                
-                                
-
-                                result = response.json()
-                                st.success("Analysis Result 👇")
-                                st.write("Text:", result["text"])
-                                st.write("Label:",result["label"])
-                                st.write("Confidence:", result["confidence"])
-                                
-                        
-                            
-                            
-
-                                label = result.get("label")
-                                conf = result.get("confidence", 0)
-
-                                st.success("Done ✅")
-
-                                if conf >= 0.6:
-                                    st.write("**Label:**", label)
-                                else:
-                                    st.write("**Label:** UNCERTAIN")
-
-                                    st.write("**Confidence:**", f"{conf*100:.2f}%")
-
-                                if conf < 0.6:
-                                    st.warning("Neutral / Confused 😐")
-                                elif label == "POSITIVE":
-                                    st.success("Positive Sentiment 😊")
-                                elif label == "NEGATIVE":
-                                    st.error("Negative Sentiment 😞")
-                                else:
-                                    st.warning("Neutral / Uncertain Sentiment 🤔")
-                            else:
-                                st.error("API Error")
-            
-                        except requests.exceptions.ConnectionError:
-                            st.error("❌ Backend API running nahi hai (FastAPI start karo)")
-
-                        except requests.exceptions.Timeout:
-                            st.error("⏳ API response slow hai, thodi der baad try karo")
-
-                        except Exception as e:
-                            print(traceback.format_exc)
-                            st.error(f"Unexpected Error: {e}")
-
 if __name__ == "__main__":
     main()
