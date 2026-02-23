@@ -1,23 +1,23 @@
 """
 PromptML Studio - Model Builder Module
-PyCaret 3.1.0 Fully Compatible - All preprocessing params fixed
+PyCaret 3.1.0 Fully Compatible - Production Ready
+Supports:
+- Classification
+- Regression
+- Clustering
 """
 
 import pandas as pd
 import numpy as np
-from typing import Dict, Tuple, Any, List
+from typing import Dict, Any
 import joblib
 import os
-from datetime import datetime
 import warnings
-warnings.filterwarnings('ignore')
+warnings.filterwarnings("ignore")
+
 
 class ModelBuilder:
-    """
-    Builds and trains ML models using PyCaret AutoML
-    Supports both regression and classification tasks
-    """
-    
+
     def __init__(self):
         self.model = None
         self.preprocessor = None
@@ -26,205 +26,194 @@ class ModelBuilder:
         self.feature_importance = None
         self.setup_config = None
 
+    # ============================================================
+    # MAIN ENTRY
+    # ============================================================
+
     def build_model(
         self,
         df,
         target_column=None,
-        task_type='classification',
+        task_type="classification",
         test_size=0.2,
         n_models=10
     ):
+
         self.task_type = task_type
 
         try:
-            if task_type == 'classification':
-                return self._build_classification_model(df, target_column, test_size, n_models)
+            if task_type == "classification":
+                return self._build_classification_model(df, target_column, test_size)
 
-            elif task_type == 'regression':
-                return self._build_regression_model(df, target_column, test_size, n_models)
+            elif task_type == "regression":
+                return self._build_regression_model(df, target_column, test_size)
 
-            elif task_type == 'clustering':
+            elif task_type == "clustering":
                 return self._build_clustering_model(df)
-
+            
             else:
                 raise ValueError(f"Unsupported task type: {task_type}")
 
         except Exception as e:
             raise Exception(f"Model building failed: {str(e)}")
-    
-    
-    def _build_classification_model(
-        self, 
-        df: pd.DataFrame, 
-        target_column: str,
-        test_size: float,
-        n_models: int
-    ) -> Dict[str, Any]:
-        """Build classification model using PyCaret 3.1.0"""
-        
+
+    # ============================================================
+    # CLASSIFICATION
+    # ============================================================
+
+    def _build_classification_model(self, df, target_column, test_size):
+
         from pycaret.classification import (
-            setup, compare_models, finalize_model, 
-            predict_model, pull, get_config
+            setup,
+            compare_models,
+            finalize_model,
+            predict_model,
+            pull,
+            get_config,
         )
-        
-        # PyCaret 3.1.0 compatible setup - minimal working parameters
-        print("🔧 Setting up PyCaret classification environment...")
+
+        print("Setting up PyCaret classification...")
+
         self.setup_config = setup(
             data=df,
             target=target_column,
-            train_size=1-test_size,
+            train_size=1 - test_size,
             session_id=42,
             verbose=False,
-            preprocess=True  # Handles most preprocessing automatically
+            preprocess=True,
         )
-        
-        # Compare models
-        print("🤖 Comparing multiple ML models...")
-        best_model = compare_models(
-            n_select=1,
-            sort='Accuracy'
-        )
-        
-        # Get comparison results
+
+        best_model = compare_models(n_select=1, sort="Accuracy")
         comparison_df = pull()
-        
-        # Finalize model (train on full dataset)
-        print("✅ Finalizing best model...")
+
         self.model = finalize_model(best_model)
 
-        
-        # 🔽 SAVE MODEL FOR DEPLOYMENT
-        os.makedirs("artifacts", exist_ok=True)
-        joblib.dump(self.model, "artifacts/model.pkl")
+        # ================= SAVE ARTIFACTS =================
+        self._save_artifacts(
+            model=self.model,
+            feature_columns=[col for col in df.columns if col != target_column],
+            task_type="classification",
+        )
 
-        feature_columns = [col for col in df.columns if col != target_column]
-        joblib.dump(feature_columns, "artifacts/features.pkl")
-        # 🔼
-    
-        # Get test predictions
-        test_data = get_config('X_test')
-        test_labels = get_config('y_test')
-        
-        # Make predictions
+        test_data = get_config("X_test")
+        test_labels = get_config("y_test")
         predictions = predict_model(self.model, data=test_data)
-        
-        # Extract metrics
+
         self.metrics = self._extract_classification_metrics(
-            predictions, 
-            test_labels,
-            comparison_df
+            predictions, test_labels, comparison_df
         )
-        
-        # Get feature importance
-        self.feature_importance = self._get_feature_importance(self.model, df, target_column)
-        
+
+        self.feature_importance = self._get_feature_importance(
+            self.model, df, target_column
+        )
+
         return {
-            'model': self.model,
-            'metrics': self.metrics,
-            'feature_importance': self.feature_importance,
-            'predictions': predictions,
-            'comparison': comparison_df,
-            'task_type': 'classification'
+            "model": self.model,
+            "metrics": self.metrics,
+            "feature_importance": self.feature_importance,
+            "predictions": predictions,
+            "comparison": comparison_df,
+            "task_type": "classification",
         }
-    
-    def _build_regression_model(
-        self, 
-        df: pd.DataFrame, 
-        target_column: str,
-        test_size: float,
-        n_models: int
-    ) -> Dict[str, Any]:
-        """Build regression model using PyCaret 3.1.0"""
-        
+
+    # ============================================================
+    # REGRESSION
+    # ============================================================
+
+    def _build_regression_model(self, df, target_column, test_size):
+
         from pycaret.regression import (
-            setup, compare_models, finalize_model,
-            predict_model, pull, get_config
+            setup,
+            compare_models,
+            finalize_model,
+            predict_model,
+            pull,
+            get_config,
         )
-        
-        # PyCaret 3.1.0 compatible setup - minimal working parameters
-        print("🔧 Setting up PyCaret regression environment...")
+
+        print("Setting up PyCaret regression...")
+
         self.setup_config = setup(
             data=df,
             target=target_column,
-            train_size=1-test_size,
+            train_size=1 - test_size,
             session_id=42,
             verbose=False,
-            preprocess=True  # Handles most preprocessing automatically
+            preprocess=True,
         )
-        
-        # Compare models
-        print("🤖 Comparing multiple ML models...")
-        best_model = compare_models(
-            n_select=1,
-            sort='R2'
-        )
-        
-        # Get comparison results
+
+        best_model = compare_models(n_select=1, sort="R2")
         comparison_df = pull()
-        
-        # Finalize model
-        print("✅ Finalizing best model...")
+
         self.model = finalize_model(best_model)
-        
-        # Get test predictions
-        test_data = get_config('X_test')
-        test_labels = get_config('y_test')
-        
-        # Make predictions
-        predictions = predict_model(self.model, data=test_data)
-        
-        # Extract metrics
-        self.metrics = self._extract_regression_metrics(
-            predictions,
-            test_labels,
-            comparison_df
+
+        # ================= SAVE ARTIFACTS =================
+        self._save_artifacts(
+            model=self.model,
+            feature_columns=[col for col in df.columns if col != target_column],
+            task_type="regression",
         )
-        
-        # Get feature importance
-        self.feature_importance = self._get_feature_importance(self.model, df, target_column)
-        
+
+        test_data = get_config("X_test")
+        test_labels = get_config("y_test")
+        predictions = predict_model(self.model, data=test_data)
+
+        self.metrics = self._extract_regression_metrics(
+            predictions, test_labels, comparison_df
+        )
+
+        self.feature_importance = self._get_feature_importance(
+            self.model, df, target_column
+        )
+
         return {
-            'model': self.model,
-            'metrics': self.metrics,
-            'feature_importance': self.feature_importance,
-            'predictions': predictions,
-            'comparison': comparison_df,
-            'task_type': 'regression'
+            "model": self.model,
+            "metrics": self.metrics,
+            "feature_importance": self.feature_importance,
+            "predictions": predictions,
+            "comparison": comparison_df,
+            "task_type": "regression",
         }
-    
+
+    # ============================================================
+    # CLUSTERING
+    # ============================================================
+
     def _build_clustering_model(self, df):
-        """
-        Build clustering model using KMeans
-        """
+
         from sklearn.cluster import KMeans
         from sklearn.preprocessing import StandardScaler
+        from sklearn.metrics import silhouette_score
         from sklearn.decomposition import PCA
 
-        # Only numeric columns
-        X = df.select_dtypes(include=['int64', 'float64'])
+        X = df.select_dtypes(include=["int64", "float64"])
 
         if X.shape[1] < 2:
             raise ValueError("Clustering requires at least 2 numeric features")
 
-        # Scale data
         scaler = StandardScaler()
         X_scaled = scaler.fit_transform(X)
 
-        # Auto choose k (simple heuristic)
-        k = min(5, len(X_scaled) // 10 + 1)
-
+        k = min(5, max(2, len(X_scaled) // 10))
         model = KMeans(n_clusters=k, random_state=42)
         clusters = model.fit_predict(X_scaled)
 
-        # Save artifacts
+        score = silhouette_score(X_scaled, clusters)
+
         self.model = model
         self.preprocessor = scaler
 
-        # Add cluster labels
+        # Save artifacts
+        self._save_artifacts(
+            model=model,
+            feature_columns=list(X.columns),
+            task_type="clustering",
+            scaler=scaler,
+        )
+
         df_with_clusters = df.copy()
         df_with_clusters["cluster"] = clusters
 
-        # PCA for visualization
         pca = PCA(n_components=2)
         components = pca.fit_transform(X_scaled)
 
@@ -234,206 +223,121 @@ class ModelBuilder:
 
         self.metrics = {
             "n_clusters": k,
-            "algorithm": "KMeans"
+            "algorithm": "KMeans",
+            "silhouette_score": round(score, 4),
         }
 
         return {
             "model": model,
             "metrics": self.metrics,
-            "predictions": df_with_clusters,
+            "predictions": viz_df,  # Use viz_df to include PCA columns for ReportGenerator
             "viz_data": viz_df,
-            "task_type": "clustering"
+            "task_type": "clustering",
+            "comparison": pd.DataFrame(),  # Added to prevent KeyError in app.py
+            "feature_importance": pd.DataFrame()  # Added to prevent KeyError in app.py
         }
 
+    # ============================================================
+    # ARTIFACT SAVER
+    # ============================================================
 
-    def _extract_classification_metrics(
-        self, 
-        predictions: pd.DataFrame,
-        test_labels: pd.Series,
-        comparison_df: pd.DataFrame
-    ) -> Dict[str, float]:
-        """Extract classification metrics"""
-        
+    def _save_artifacts(self, model, feature_columns, task_type, scaler=None):
+
+        os.makedirs("artifacts", exist_ok=True)
+
+        joblib.dump(model, "artifacts/model.pkl")
+        joblib.dump(feature_columns, "artifacts/features.pkl")
+        joblib.dump(task_type, "artifacts/task_type.pkl")
+
+        if scaler:
+            joblib.dump(scaler, "artifacts/scaler.pkl")
+
+    # ============================================================
+    # METRICS
+    # ============================================================
+
+    def _extract_classification_metrics(self, predictions, test_labels, comparison_df):
+
         from sklearn.metrics import (
-            accuracy_score, precision_score, recall_score,
-            f1_score, roc_auc_score, confusion_matrix
+            accuracy_score,
+            precision_score,
+            recall_score,
+            f1_score,
         )
-        
-        # Get predicted labels
-        y_pred = predictions['prediction_label'].values
+
+        y_pred = predictions["prediction_label"].values
         y_true = test_labels.values
-        
-        # Calculate metrics
+
         metrics = {
-            'accuracy': round(accuracy_score(y_true, y_pred), 4),
-            'precision': round(precision_score(y_true, y_pred, average='weighted'), 4),
-            'recall': round(recall_score(y_true, y_pred, average='weighted'), 4),
-            'f1_score': round(f1_score(y_true, y_pred, average='weighted'), 4),
+            "accuracy": round(accuracy_score(y_true, y_pred), 4),
+            "precision": round(precision_score(y_true, y_pred, average="weighted"), 4),
+            "recall": round(recall_score(y_true, y_pred, average="weighted"), 4),
+            "f1_score": round(f1_score(y_true, y_pred, average="weighted"), 4),
         }
-        
-        # Add AUC if binary classification
-        if len(np.unique(y_true)) == 2:
-            try:
-                y_pred_proba = predictions['prediction_score'].values
-                metrics['auc'] = round(roc_auc_score(y_true, y_pred_proba), 4)
-            except:
-                pass
-        
-        # Add confusion matrix
-        metrics['confusion_matrix'] = confusion_matrix(y_true, y_pred).tolist()
-        
-        # Add model name
+
         if not comparison_df.empty:
-            metrics['model_name'] = comparison_df.index[0]
-        
+            metrics["model_name"] = comparison_df.index[0]
+
         return metrics
-    
-    def _extract_regression_metrics(
-        self,
-        predictions: pd.DataFrame,
-        test_labels: pd.Series,
-        comparison_df: pd.DataFrame
-    ) -> Dict[str, float]:
-        """Extract regression metrics"""
-        
+
+    def _extract_regression_metrics(self, predictions, test_labels, comparison_df):
+
         from sklearn.metrics import (
-            mean_squared_error, mean_absolute_error,
-            r2_score, mean_absolute_percentage_error
+            mean_squared_error,
+            mean_absolute_error,
+            r2_score,
         )
-        
-        # Get predictions
-        y_pred = predictions['prediction_label'].values
+
+        y_pred = predictions["prediction_label"].values
         y_true = test_labels.values
-        
-        # Calculate metrics
+
         mse = mean_squared_error(y_true, y_pred)
+
         metrics = {
-            'r2_score': round(r2_score(y_true, y_pred), 4),
-            'rmse': round(np.sqrt(mse), 4),
-            'mae': round(mean_absolute_error(y_true, y_pred), 4),
-            'mse': round(mse, 4),
+            "r2_score": round(r2_score(y_true, y_pred), 4),
+            "rmse": round(np.sqrt(mse), 4),
+            "mae": round(mean_absolute_error(y_true, y_pred), 4),
         }
-        
-        # Add MAPE if no zeros in y_true
-        if not (y_true == 0).any():
-            try:
-                metrics['mape'] = round(mean_absolute_percentage_error(y_true, y_pred) * 100, 2)
-            except:
-                pass
-        
-        # Add model name
+
         if not comparison_df.empty:
-            metrics['model_name'] = comparison_df.index[0]
-        
+            metrics["model_name"] = comparison_df.index[0]
+
         return metrics
-    
-    def _get_feature_importance(
-        self,
-        model: Any,
-        df: pd.DataFrame,
-        target_column: str
-    ) -> pd.DataFrame:
-        """Extract feature importance from model"""
-        
+
+    # ============================================================
+    # FEATURE IMPORTANCE (PIPELINE SAFE)
+    # ============================================================
+
+    def _get_feature_importance(self, model, df, target_column):
+
         try:
-            # Get feature names
             feature_names = [col for col in df.columns if col != target_column]
-            
-            # Try to get feature importance
-            if hasattr(model, 'feature_importances_'):
+
+            # Handle PyCaret pipeline
+            if hasattr(model, "named_steps"):
+                for step in model.named_steps.values():
+                    if hasattr(step, "feature_importances_"):
+                        model = step
+                        break
+
+            if hasattr(model, "feature_importances_"):
                 importances = model.feature_importances_
-            elif hasattr(model, 'coef_'):
+
+            elif hasattr(model, "coef_"):
                 importances = np.abs(model.coef_).flatten()
+
             else:
-                # Use permutation importance as fallback
                 return pd.DataFrame({
-                    'feature': feature_names,
-                    'importance': [1.0 / len(feature_names)] * len(feature_names)
+                    "feature": feature_names,
+                    "importance": [1 / len(feature_names)] * len(feature_names),
                 })
-            
-            # Create DataFrame
+
             importance_df = pd.DataFrame({
-                'feature': feature_names[:len(importances)],
-                'importance': importances
-            })
-            
-            # Sort by importance
-            importance_df = importance_df.sort_values('importance', ascending=False)
-            
-            # Normalize to 0-1
-            if importance_df['importance'].max() > 0:
-                importance_df['importance'] = importance_df['importance'] / importance_df['importance'].max()
-            
+                "feature": feature_names[: len(importances)],
+                "importance": importances,
+            }).sort_values("importance", ascending=False)
+
             return importance_df
-            
-        except Exception as e:
-            print(f"Warning: Could not extract feature importance: {e}")
-            return pd.DataFrame(columns=['feature', 'importance'])
-    
-    def save_model(self, output_dir: str, model_name: str = "model") -> Dict[str, str]:
-        """Save model and artifacts to disk"""
-        os.makedirs(output_dir, exist_ok=True)
-        
-        # Save model
-        model_path = os.path.join(output_dir, f"{model_name}.pkl")
-        joblib.dump(self.model, model_path)
-        
-        # Save metrics
-        metrics_path = os.path.join(output_dir, f"{model_name}_metrics.pkl")
-        joblib.dump(self.metrics, metrics_path)
-        
-        # Save feature importance
-        if self.feature_importance is not None:
-            fi_path = os.path.join(output_dir, f"{model_name}_feature_importance.csv")
-            self.feature_importance.to_csv(fi_path, index=False)
-        else:
-            fi_path = None
-        
-        return {
-            'model_path': model_path,
-            'metrics_path': metrics_path,
-            'feature_importance_path': fi_path
-        }
-    
-    def load_model(self, model_path: str):
-        """Load saved model"""
-        self.model = joblib.load(model_path)
-        return self.model
 
-
-def build_model(
-    df: pd.DataFrame,
-    target_column: str,
-    task_type: str = 'classification'
-) -> Tuple[Any, Dict, pd.DataFrame]:
-    """Convenience function to build model"""
-    builder = ModelBuilder()
-    result = builder.build_model(df, target_column, task_type)
-    
-    return result['model'], result['metrics'], result['feature_importance']
-
-
-if __name__ == "__main__":
-    # Test with sample data
-    print("🧪 Testing Model Builder\n")
-    
-    # Create sample classification data
-    from sklearn.datasets import make_classification
-    X, y = make_classification(n_samples=200, n_features=10, n_classes=2, random_state=42)
-    
-    df = pd.DataFrame(X, columns=[f'feature_{i}' for i in range(10)])
-    df['target'] = y
-    
-    # Build model
-    builder = ModelBuilder()
-    result = builder.build_model(df, 'target', 'classification')
-    
-    print(f"✅ Model trained: {result['metrics']['model_name']}")
-    print(f"📊 Accuracy: {result['metrics']['accuracy']}")
-    print(f"📊 F1 Score: {result['metrics']['f1_score']}")
-import joblib
-import os
-
-def save_trained_model(model):
-    os.makedirs("generated_website/model", exist_ok=True)
-    joblib.dump(model, "generated_website/model/model.pkl")
+        except:
+            return pd.DataFrame(columns=["feature", "importance"])
