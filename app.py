@@ -465,19 +465,14 @@ def show_results_no_code():
     result = st.session_state.model_result
     metrics = result.get("metrics", {})
     charts = result.get("charts", {})
+    task_type = result.get("task_type")
 
     st.markdown("---")
     st.markdown("## 📊 Model Results")
 
-    # ===============================
-    # CLASSIFICATION
-    # ===============================
-    if result['task_type'] == 'classification':
-
+    if task_type == 'classification':
         st.markdown("### 🎯 Performance Metrics")
-
         col1, col2, col3, col4 = st.columns(4)
-
         with col1:
             st.metric("Accuracy", f"{metrics.get('accuracy', 0):.2%}")
         with col2:
@@ -490,29 +485,20 @@ def show_results_no_code():
         st.info(f"🤖 Best Model: **{metrics.get('model_name', 'Unknown')}**")
 
         st.markdown("### 📈 Visualizations")
-
         if 'feature_importance' in charts:
             st.plotly_chart(charts['feature_importance'], use_container_width=True)
 
         col1, col2 = st.columns(2)
-
         with col1:
             if 'confusion_matrix' in charts:
                 st.plotly_chart(charts['confusion_matrix'], use_container_width=True)
-
         with col2:
             if 'metrics_comparison' in charts:
                 st.plotly_chart(charts['metrics_comparison'], use_container_width=True)
 
-    # ===============================
-    # REGRESSION
-    # ===============================
-    elif result['task_type'] == 'regression':
-
+    elif task_type == 'regression':
         st.markdown("### 🎯 Performance Metrics")
-
         col1, col2, col3, col4 = st.columns(4)
-
         with col1:
             st.metric("R2 Score", f"{metrics.get('r2_score', 0):.4f}")
         with col2:
@@ -525,39 +511,28 @@ def show_results_no_code():
         st.info(f"🤖 Best Model: **{metrics.get('model_name', 'Unknown')}**")
 
         st.markdown("### 📈 Visualizations")
-
         col1, col2 = st.columns(2)
-
         with col1:
             if 'actual_vs_predicted' in charts:
                 st.plotly_chart(charts['actual_vs_predicted'], use_container_width=True)
-
         with col2:
             if 'residuals' in charts:
                 st.plotly_chart(charts['residuals'], use_container_width=True)
 
-    # ===============================
-    # CLUSTERING
-    # ===============================
-    elif result['task_type'] == 'clustering':
-
+    elif task_type == 'clustering':
         st.markdown("### 🔵 Clustering Results")
-
         col1, col2 = st.columns(2)
-
         with col1:
             st.metric("Number of Clusters", metrics.get("n_clusters", 0))
-
         with col2:
             st.metric("Algorithm", metrics.get("algorithm", "KMeans"))
 
         st.markdown("### 📋 Clustered Data Preview")
-        st.dataframe(result['predictions'].head(), use_container_width=True)
+        if 'predictions' in result:
+            st.dataframe(result['predictions'].head(), use_container_width=True)
 
-        # PCA Visualization if available
         if "viz_data" in result:
             import plotly.express as px
-
             fig = px.scatter(
                 result["viz_data"],
                 x="pca_1",
@@ -565,17 +540,11 @@ def show_results_no_code():
                 color="cluster",
                 title="Cluster Visualization (PCA Projection)"
             )
-
             st.plotly_chart(fig, use_container_width=True)
 
-    # ===============================
-    # DOWNLOAD SECTION
-    # ===============================
     st.markdown("### 📥 Download Results")
-
     col1, col2 = st.columns(2)
 
-    # Download Predictions
     with col1:
         if "predictions" in result:
             predictions_csv = result['predictions'].to_csv(index=False)
@@ -587,9 +556,8 @@ def show_results_no_code():
                 use_container_width=True
             )
 
-    # Generate PDF (only for supervised tasks)
     with col2:
-        if result['task_type'] in ['classification', 'regression']:
+        if task_type in ['classification', 'regression'] and 'report_generator' in result:
             if st.button("📄 Generate PDF Report", use_container_width=True):
                 with st.spinner("Generating PDF report..."):
                     try:
@@ -606,7 +574,7 @@ def show_results_no_code():
                             output_path=pdf_path,
                             metrics=result['metrics'],
                             feature_importance=result.get('feature_importance'),
-                            task_type=result['task_type'],
+                            task_type=task_type,
                             dataset_info=dataset_info
                         )
 
@@ -625,7 +593,6 @@ def show_results_no_code():
 
                     except Exception as e:
                         st.error(f"Error generating PDF: {str(e)}")
-
 
 def show_results_developer():
     """Display results for developer mode"""
