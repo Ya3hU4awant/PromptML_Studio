@@ -4,8 +4,9 @@ AI-Powered AutoML Platform with Dual-Mode Interface
 """
 import requests
 
-import shutil
 import streamlit as st
+import ollama
+import shutil
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
@@ -204,9 +205,7 @@ docker run -p 8501:8501 my-model-app
 # Page configuration
 st.set_page_config(
     page_title="PromptML Studio",
-    page_icon="🤖",
-    layout="wide",
-    initial_sidebar_state="expanded"
+    layout="wide"
 )
 
 # Load custom CSS
@@ -755,13 +754,76 @@ if __name__ == "__main__":
 
 
 def main():
-    """Main application"""
-    
-    # Sidebar
+
+    # ---------- SESSION STATE (TOP) ----------
+    if "mode" not in st.session_state:
+        st.session_state.mode = None
+
+    if "chat_history" not in st.session_state:
+        st.session_state.chat_history = []
+
+    # ---------- SIDEBAR ----------
     with st.sidebar:
-        st.image("https://img.icons8.com/fluency/96/artificial-intelligence.png", width=80)
-        st.title("PromptML Studio")
+        st.markdown("## 🤖 PromptML Assistant")
+        st.caption("Ask anything about this project, ML, or your data")
+
+        user_input = st.text_input(
+            "Ask me something...",
+            placeholder="How does PromptML Studio work?"
+        )
+
+        system_prompt = """
+        You are PromptML Studio's AI assistant.
+        You must:
+        - Explain this project clearly
+        - Help users understand ML results
+        - Explain metrics, models, and predictions
+        - Be concise, friendly, and technical when needed
+        """
+
+        # ⬇⬇⬇ PASTE YOUR CODE RIGHT HERE ⬇⬇⬇
+        if st.button("Send", use_container_width=True):
+            if user_input.strip():
+                st.session_state.chat_history.append(
+                    {"role": "user", "content": user_input}
+                )
+
+                try:
+                    response = ollama.chat(
+                        model="llama3",
+                        messages=[
+                            {"role": "system", "content": system_prompt},
+                            *st.session_state.chat_history
+                        ]
+                    )
+                    bot_reply = response["message"]["content"]
+
+                except Exception as e:
+                    bot_reply = (
+                        "⚠️ Ollama is not responding.\n\n"
+                        "Make sure:\n"
+                        "• `ollama serve` is running\n"
+                        "• model `llama3` is pulled\n\n"
+                        f"Error: {e}"
+                    )
+
+                st.session_state.chat_history.append(
+                    {"role": "assistant", "content": bot_reply}
+                )
+        # ⬆⬆⬆ END PASTE ⬆⬆⬆
+
+        # ---------- CHAT DISPLAY ----------
+        for msg in st.session_state.chat_history[::-1]:
+            if msg["role"] == "user":
+                st.markdown(f"🧑 **You:** {msg['content']}")
+            else:
+                st.markdown(f"🤖 **Bot:** {msg['content']}")
+
         st.markdown("---")
+       
+# -------------------- REST OF YOUR APP --------------------
+# Existing UI, No-Code mode, Developer mode, etc.
+
         
         # Mode indicator
         if st.session_state.mode:

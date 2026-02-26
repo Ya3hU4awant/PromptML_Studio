@@ -72,25 +72,22 @@ reports/
 Thumbs.db
 .DS_Store
 
-#ML training artifacts
+
+# ML training artifacts
 catboost_info/
+*.tfevents
+*.tsv
 
 # Generated websites
 generated_website/
 generated_website.zip
 
-#local projects
+# Local projects
 my-project/
 
-#Installers
+# Installers
 *.exe
 
-#Python cache
+# Python cache
 __pycache__/
-*.pyc 
-
-catboost_info/
-generated_website/
-generated_website.zip
-my-project/
-*.exe
+*.pyc
