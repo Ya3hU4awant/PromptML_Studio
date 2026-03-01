@@ -1,8 +1,30 @@
-streamlit
-pandas
-numpy
+# ── Core framework ──────────────────────────────────────────────
+streamlit>=1.28.0
+
+# ── Data & ML ───────────────────────────────────────────────────
+pandas>=1.5.0
+numpy>=1.24.0
 scikit-learn==1.2.2
 pycaret==3.1.0
-plotly
-joblib
-reportlab
+xgboost>=1.7.0
+lightgbm>=3.3.0
+catboost>=1.2.0
+joblib>=1.3.0
+
+# ── Visualisation ───────────────────────────────────────────────
+plotly>=5.15.0
+matplotlib>=3.7.0
+seaborn>=0.12.0
+
+# ── PDF report generation ────────────────────────────────────────
+reportlab>=4.0.0
+
+# ── AI / LLM backends (both optional — app falls back gracefully) ─
+
+# Groq API — chatbot backend (free): set GROQ_API_KEY env var
+# Get free key at: https://console.groq.com
+groq>=0.9.0
+
+# ── Utilities ───────────────────────────────────────────────────
+requests>=2.31.0
+python-dotenv>=1.0.0
