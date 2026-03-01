@@ -4,8 +4,8 @@ AI-Powered AutoML Platform with Dual-Mode Interface
 """
 import requests
 
-import shutil
 import streamlit as st
+import shutil
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
@@ -204,9 +204,7 @@ docker run -p 8501:8501 my-model-app
 # Page configuration
 st.set_page_config(
     page_title="PromptML Studio",
-    page_icon="🤖",
-    layout="wide",
-    initial_sidebar_state="expanded"
+    layout="wide"
 )
 
 # Load custom CSS
@@ -465,19 +463,14 @@ def show_results_no_code():
     result = st.session_state.model_result
     metrics = result.get("metrics", {})
     charts = result.get("charts", {})
+    task_type = result.get("task_type")
 
     st.markdown("---")
     st.markdown("## 📊 Model Results")
 
-    # ===============================
-    # CLASSIFICATION
-    # ===============================
-    if result['task_type'] == 'classification':
-
+    if task_type == 'classification':
         st.markdown("### 🎯 Performance Metrics")
-
         col1, col2, col3, col4 = st.columns(4)
-
         with col1:
             st.metric("Accuracy", f"{metrics.get('accuracy', 0):.2%}")
         with col2:
@@ -490,29 +483,20 @@ def show_results_no_code():
         st.info(f"🤖 Best Model: **{metrics.get('model_name', 'Unknown')}**")
 
         st.markdown("### 📈 Visualizations")
-
         if 'feature_importance' in charts:
             st.plotly_chart(charts['feature_importance'], use_container_width=True)
 
         col1, col2 = st.columns(2)
-
         with col1:
             if 'confusion_matrix' in charts:
                 st.plotly_chart(charts['confusion_matrix'], use_container_width=True)
-
         with col2:
             if 'metrics_comparison' in charts:
                 st.plotly_chart(charts['metrics_comparison'], use_container_width=True)
 
-    # ===============================
-    # REGRESSION
-    # ===============================
-    elif result['task_type'] == 'regression':
-
+    elif task_type == 'regression':
         st.markdown("### 🎯 Performance Metrics")
-
         col1, col2, col3, col4 = st.columns(4)
-
         with col1:
             st.metric("R2 Score", f"{metrics.get('r2_score', 0):.4f}")
         with col2:
@@ -524,40 +508,40 @@ def show_results_no_code():
 
         st.info(f"🤖 Best Model: **{metrics.get('model_name', 'Unknown')}**")
 
+        # Model comparison dropdown
+        if result.get('comparison') is not None and not result['comparison'].empty:
+            with st.expander("📊 View All Models Comparison", expanded=False):
+                st.dataframe(
+                    result['comparison'].style.highlight_max(
+                        subset=[result['comparison'].columns[0]],
+                        color='#1a472a'
+                    ),
+                    use_container_width=True
+                )
+
         st.markdown("### 📈 Visualizations")
-
         col1, col2 = st.columns(2)
-
         with col1:
             if 'actual_vs_predicted' in charts:
                 st.plotly_chart(charts['actual_vs_predicted'], use_container_width=True)
-
         with col2:
             if 'residuals' in charts:
                 st.plotly_chart(charts['residuals'], use_container_width=True)
 
-    # ===============================
-    # CLUSTERING
-    # ===============================
-    elif result['task_type'] == 'clustering':
-
+    elif task_type == 'clustering':
         st.markdown("### 🔵 Clustering Results")
-
         col1, col2 = st.columns(2)
-
         with col1:
             st.metric("Number of Clusters", metrics.get("n_clusters", 0))
-
         with col2:
             st.metric("Algorithm", metrics.get("algorithm", "KMeans"))
 
         st.markdown("### 📋 Clustered Data Preview")
-        st.dataframe(result['predictions'].head(), use_container_width=True)
+        if 'predictions' in result:
+            st.dataframe(result['predictions'].head(), use_container_width=True)
 
-        # PCA Visualization if available
         if "viz_data" in result:
             import plotly.express as px
-
             fig = px.scatter(
                 result["viz_data"],
                 x="pca_1",
@@ -565,17 +549,11 @@ def show_results_no_code():
                 color="cluster",
                 title="Cluster Visualization (PCA Projection)"
             )
-
             st.plotly_chart(fig, use_container_width=True)
 
-    # ===============================
-    # DOWNLOAD SECTION
-    # ===============================
     st.markdown("### 📥 Download Results")
-
     col1, col2 = st.columns(2)
 
-    # Download Predictions
     with col1:
         if "predictions" in result:
             predictions_csv = result['predictions'].to_csv(index=False)
@@ -587,9 +565,8 @@ def show_results_no_code():
                 use_container_width=True
             )
 
-    # Generate PDF (only for supervised tasks)
     with col2:
-        if result['task_type'] in ['classification', 'regression']:
+        if task_type in ['classification', 'regression'] and 'report_generator' in result:
             if st.button("📄 Generate PDF Report", use_container_width=True):
                 with st.spinner("Generating PDF report..."):
                     try:
@@ -606,7 +583,7 @@ def show_results_no_code():
                             output_path=pdf_path,
                             metrics=result['metrics'],
                             feature_importance=result.get('feature_importance'),
-                            task_type=result['task_type'],
+                            task_type=task_type,
                             dataset_info=dataset_info
                         )
 
@@ -625,7 +602,6 @@ def show_results_no_code():
 
                     except Exception as e:
                         st.error(f"Error generating PDF: {str(e)}")
-
 
 def show_results_developer():
     """Display results for developer mode"""
@@ -646,6 +622,17 @@ def show_results_developer():
         st.metric("Accuracy", f"{metrics.get('accuracy', 0):.2%}")
     else:
         st.metric("R² Score", f"{metrics.get('r2_score', 0):.4f}")
+    
+    # Model comparison dropdown
+    if result.get('comparison') is not None and not result['comparison'].empty:
+        with st.expander("📊 View All Models Comparison", expanded=False):
+            st.dataframe(
+                result['comparison'].style.highlight_max(
+                    subset=[result['comparison'].columns[0]],
+                    color='#1a472a'
+                ),
+                use_container_width=True
+            )
 
     # Generate package
     st.markdown("### 📦 Production Package")
@@ -788,13 +775,182 @@ if __name__ == "__main__":
 
 
 def main():
-    """Main application"""
-    
-    # Sidebar
+
+    # ---------- SESSION STATE (TOP) ----------
+    if "mode" not in st.session_state:
+        st.session_state.mode = None
+
+    if "chat_history" not in st.session_state:
+        st.session_state.chat_history = []
+
+    # ---------- SIDEBAR ----------
     with st.sidebar:
-        st.image("https://img.icons8.com/fluency/96/artificial-intelligence.png", width=80)
-        st.title("PromptML Studio")
+        st.markdown("## 🤖 PromptML Assistant")
+        st.caption("ML • Data Science • Computer Science • Your Results")
+
+        # Build context from current session
+        context_block = ""
+        if st.session_state.get("model_trained") and st.session_state.get("model_result"):
+            r = st.session_state.model_result
+            m = r.get("metrics", {})
+            context_block = f"""
+CURRENT SESSION CONTEXT:
+- Task Type    : {r.get('task_type', 'N/A')}
+- Target Column: {r.get('target_column', 'N/A')}
+- Best Model   : {m.get('model_name', 'N/A')}
+"""
+            if r.get("task_type") == "classification":
+                context_block += f"- Accuracy: {m.get('accuracy','N/A')} | F1: {m.get('f1_score','N/A')}\n"
+            elif r.get("task_type") == "regression":
+                context_block += f"- R2: {m.get('r2_score','N/A')} | RMSE: {m.get('rmse','N/A')}\n"
+            if st.session_state.get("uploaded_data") is not None:
+                df_info = st.session_state.uploaded_data
+                context_block += f"- Dataset: {df_info.shape[0]} rows x {df_info.shape[1]} cols\n"
+
+        system_prompt = f"""You are PromptML Studio's expert AI assistant.
+
+Your expertise covers:
+1. PROMPTML STUDIO - every feature, workflow, AutoML, PyCaret, model selection, deployment
+2. MACHINE LEARNING - any algorithm, concept (overfitting, cross-validation, ensemble), metrics (Accuracy, F1, RMSE, R2, AUC)
+3. DATA SCIENCE - EDA, feature engineering, pandas, numpy, matplotlib, seaborn, plotly
+4. COMPUTER SCIENCE - Python, algorithms, Docker, Git, APIs, cloud deployment
+5. USER RESULTS - explain their specific metrics and give improvement tips
+
+STYLE:
+- When explaining PromptML Studio features, use simple plain English — no code, no jargon
+- Imagine you are explaining to someone who has never used ML before
+- Use real life analogies and examples (e.g. "Accuracy is like a test score out of 100")
+- For technical ML/CS questions from developers, be technical and precise
+- Use bullet points for steps, keep sentences short
+- Always be encouraging and friendly
+- End answers with 1 simple actionable tip
+
+{context_block}"""
+
+        # FAQs Dropdown
+        faq_options = {
+            "— Select a question —": "",
+            "📌 How do I use PromptML Studio?": "Explain how to use PromptML Studio step by step in simple non-technical terms for a beginner",
+            "📌 Why is my dataset not working?": "Why might my CSV dataset not work in PromptML Studio and how do I fix it?",
+            "📌 Why are my results so low?": "My model results are very low, what could be wrong and how do I improve them?",
+            "📌 What is Accuracy?": "Explain Accuracy in machine learning in very simple terms with a real life example",
+            "📌 What is R² score?": "Explain R² score in very simple terms with a real life example",
+            "📌 What is RMSE?": "Explain RMSE in very simple terms with a real life example",
+            "📌 What does the best model mean?": "What does best model mean in PromptML Studio and why was it selected?",
+            "📌 What is feature importance?": "Explain feature importance in simple terms, why does it matter?",
+            "📌 No-Code vs Developer Mode?": "What is the difference between No-Code Mode and Developer Mode in PromptML Studio in simple terms?",
+            "📌 How to improve my model?": "Give me simple practical tips to improve my machine learning model results",
+            "📌 What is overfitting?": "Explain overfitting in very simple non-technical terms with a real life example",
+            "📌 How to deploy my model?": "How do I deploy my trained model from PromptML Studio as a live website in simple steps?",
+        }
+
+        selected_faq = st.selectbox(
+            "💡 FAQs & Quick Questions",
+            options=list(faq_options.keys()),
+            key="faq_select"
+        )
+
+        if selected_faq != "— Select a question —":
+            if st.button("Ask this ➤", use_container_width=True, key="faq_btn"):
+                question = faq_options[selected_faq]
+                st.session_state.chat_history.append(
+                    {"role": "user", "content": question}
+                )
+                try:
+                    from groq import Groq
+                    groq_client = Groq(api_key=os.environ["GROQ_API_KEY"])
+                    groq_response = groq_client.chat.completions.create(
+                        model="llama-3.3-70b-versatile",
+                        max_tokens=1024,
+                        messages=[
+                            {"role": "system", "content": system_prompt},
+                            *[{"role": m["role"], "content": m["content"]}
+                              for m in st.session_state.chat_history
+                              if m["role"] in ("user", "assistant")]
+                        ]
+                    )
+                    bot_reply = groq_response.choices[0].message.content
+                except Exception as e:
+                    bot_reply = f"⚠️ Groq error: {e}"
+                st.session_state.chat_history.append(
+                    {"role": "assistant", "content": bot_reply}
+                )
+                st.rerun()
+
+        prefill = st.session_state.pop("prefill_question", "")
+        user_input = st.text_input(
+            "Ask me anything...",
+            value=prefill,
+            placeholder="e.g. What is Random Forest? Why is R² negative?",
+            key="chat_input"
+        )
+
+        send_col, clear_col = st.columns([2, 1])
+        send_clicked  = send_col.button("Send ➤", use_container_width=True, type="primary")
+        clear_clicked = clear_col.button("🗑️ Clear", use_container_width=True)
+
+        if clear_clicked:
+            st.session_state.chat_history = []
+            st.rerun()
+
+        if send_clicked and user_input.strip():
+            st.session_state.chat_history.append(
+                {"role": "user", "content": user_input.strip()}
+            )
+
+            bot_reply = None
+
+            # --- Groq API ---
+            try:
+                from groq import Groq
+                groq_client = Groq(api_key=os.environ["GROQ_API_KEY"])
+                groq_response = groq_client.chat.completions.create(
+                    model="llama-3.3-70b-versatile",
+                    max_tokens=1024,
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        *[{"role": m["role"], "content": m["content"]}
+                          for m in st.session_state.chat_history
+                          if m["role"] in ("user", "assistant")]
+                    ]
+                )
+                bot_reply = groq_response.choices[0].message.content
+            except Exception as e:
+                bot_reply = (
+                    "⚠️ **Groq API error.**\n\n"
+                    "Make sure `GROQ_API_KEY` is set.\n"
+                    "Get free key at: https://console.groq.com\n\n"
+                    f"_Error: {e}_"
+                )
+
+            st.session_state.chat_history.append(
+                {"role": "assistant", "content": bot_reply}
+            )
+            st.rerun()
+
+        # Chat display
         st.markdown("---")
+        for msg in reversed(st.session_state.chat_history):
+            if msg["role"] == "user":
+                st.markdown(
+                    f"<div style='background:#1e1e2e;padding:8px 12px;border-radius:8px;"
+                    f"margin-bottom:6px;border-left:3px solid #6c63ff'>"
+                    f"🧑 <b>You:</b> {msg['content']}</div>",
+                    unsafe_allow_html=True
+                )
+            else:
+                st.markdown(
+                    f"<div style='background:#0f2a1a;padding:8px 12px;border-radius:8px;"
+                    f"margin-bottom:10px;border-left:3px solid #2ecc71'>"
+                    f"🤖 <b>Assistant:</b><br>{msg['content']}</div>",
+                    unsafe_allow_html=True
+                )
+
+        st.markdown("---")
+       
+# -------------------- REST OF YOUR APP --------------------
+# Existing UI, No-Code mode, Developer mode, etc.
+
         
         # Mode indicator
         if st.session_state.mode:
@@ -854,7 +1010,7 @@ def main():
                 # WEBSITE GENERATION SECTION
                 # ===============================
 
-                from backend.ml_engine.website_generator import generate_website
+                from backend.ml_engine.website_generator import generate_website, generate_preview_html
 
                 if st.session_state.get("model_trained"):
                     st.markdown("---")
@@ -863,14 +1019,42 @@ def main():
                     if st.button("🚀 Build Website", type="primary", use_container_width=True):
                         with st.spinner("Generating website..."):
                             zip_path = generate_website()
-                            with open(zip_path, "rb") as f:
+                            st.session_state["website_zip_path"] = zip_path
+                            import joblib as _jl
+                            _features = _jl.load("artifacts/features.pkl")
+                            _task_type = _jl.load("artifacts/task_type.pkl")
+                            st.session_state["preview_html"] = generate_preview_html(_features, _task_type)
+
+                    if st.session_state.get("website_zip_path"):
+                        saved_zip_path = st.session_state["website_zip_path"]
+                        st.success("✅ Website generated successfully!")
+
+                        btn_col1, btn_col2 = st.columns(2)
+
+                        with btn_col1:
+                            with open(saved_zip_path, "rb") as f:
                                 st.download_button(
                                     "⬇️ Download Website ZIP",
                                     f,
                                     file_name="promptml_website.zip",
-                                    mime="application/zip"
+                                    mime="application/zip",
+                                    use_container_width=True,
                                 )
-                            st.success("Website generated successfully!")
-    
+
+                        with btn_col2:
+                            if st.button("👁️ Preview Website", use_container_width=True):
+                                st.session_state["show_preview"] = not st.session_state.get("show_preview", False)
+
+                        if st.session_state.get("show_preview") and st.session_state.get("preview_html"):
+                            st.markdown("#### 🖥️ Website Preview")
+                            st.caption("This is how your deployed app will look. Fill the form and click Predict to try it.")
+                            import streamlit.components.v1 as components
+                            components.html(
+                                st.session_state["preview_html"],
+                                height=520,
+                                scrolling=True,
+                            )
+
+                
 if __name__ == "__main__":
     main()
