@@ -157,7 +157,7 @@ class ModelBuilder:
         best_model = compare_models(n_select=1, sort="R2", fold=3)
         comparison_df = pull()
 
-        self.model = finalize_model(best_model)
+        self.model = finalize_model(best_model) 
 
         # ================= SAVE ARTIFACTS =================
         self._save_artifacts(
