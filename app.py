@@ -827,6 +827,47 @@ STYLE:
 
 {context_block}"""
 
+         # Prompt Refiner
+        st.markdown("**✨ Prompt Refiner**")
+        user_raw_prompt = st.text_input(
+            "Paste your prompt to refine:",
+            placeholder="e.g. predict sales, classify churn...",
+            key="prompt_refiner_input"
+        )
+        if st.button("✨ Refine My Prompt", use_container_width=True, key="refine_btn"):
+            if user_raw_prompt.strip():
+                refine_question = (
+                    f"Refine and improve this ML prompt for use in PromptML Studio. "
+                    f"It should clearly mention: what to predict or classify, "
+                    f"the target column if obvious, and the task type "
+                    f"(regression/classification/clustering). "
+                    f"Give 2-3 improved versions, keep them short and natural. "
+                    f"My original prompt: '{user_raw_prompt}'"
+                )
+                st.session_state.chat_history.append(
+                    {"role": "user", "content": refine_question}
+                )
+                try:
+                    from groq import Groq
+                    groq_client = Groq(api_key=os.environ["GROQ_API_KEY"])
+                    groq_response = groq_client.chat.completions.create(
+                        model="llama-3.3-70b-versatile",
+                        max_tokens=1024,
+                        messages=[
+                            {"role": "system", "content": system_prompt},
+                            *[{"role": m["role"], "content": m["content"]}
+                              for m in st.session_state.chat_history
+                              if m["role"] in ("user", "assistant")]
+                        ]
+                    )
+                    bot_reply = groq_response.choices[0].message.content
+                except Exception as e:
+                    bot_reply = f"⚠️ Groq error: {e}"
+                st.session_state.chat_history.append(
+                    {"role": "assistant", "content": bot_reply}
+                )
+                st.rerun()
+
         # FAQs Dropdown
         faq_options = {
             "— Select a question —": "",
