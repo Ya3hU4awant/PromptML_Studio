@@ -84,12 +84,18 @@ class ModelBuilder:
             train_size=0.8,
             session_id=42,
             verbose=False,
-            n_jobs=-1,        # all CPU cores
+            n_jobs=1,
             preprocess=True,
-            normalize=False # skip if tree models dominate
         )
 
-        best_model = compare_models(n_select=1, sort="Accuracy", fold=3)
+        best_model = compare_models(
+            n_select=1,
+            sort="Accuracy",
+            fold=3,
+            exclude=["svm", "mlp", "gbc"],
+            budget_time=2.0
+        )
+
         comparison_df = pull()
 
         self.model = finalize_model(best_model)
@@ -149,12 +155,19 @@ class ModelBuilder:
             train_size=0.8,
             session_id=42,
             verbose=False,
-            n_jobs=-1,        # all CPU cores
+            n_jobs=1,
             preprocess=True,
-            normalize=False # skip if tree models dominate
         )
 
-        best_model = compare_models(n_select=1, sort="R2", fold=3)
+        best_model = compare_models(
+            n_select=1,
+            sort="R2",
+            fold=3,
+            exclude=["svm", "mlp", "gbr"],
+            budget_time=2.0
+        )
+
+
         comparison_df = pull()
 
         self.model = finalize_model(best_model) 
