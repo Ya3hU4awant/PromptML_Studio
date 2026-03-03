@@ -6,12 +6,15 @@ Supports:
 - Regression
 - Clustering
 """
+import os
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
 
 import pandas as pd
 import numpy as np
 from typing import Dict, Any
 import joblib
-import os
 import warnings
 warnings.filterwarnings("ignore")
 
@@ -93,7 +96,7 @@ class ModelBuilder:
             sort="Accuracy",
             fold=3,
             exclude=["svm", "mlp", "gbc"],
-            budget_time=2.0
+            budget_time=1.0
         )
 
         comparison_df = pull()
@@ -164,7 +167,7 @@ class ModelBuilder:
             sort="R2",
             fold=3,
             exclude=["svm", "mlp", "gbr"],
-            budget_time=2.0
+            budget_time=1.0
         )
 
 
