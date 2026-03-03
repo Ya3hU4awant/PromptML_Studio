@@ -41,24 +41,43 @@ class ModelBuilder:
         test_size=0.2,
         n_models=10
     ):
-
         self.task_type = task_type
 
+        last_error = None
+        for attempt in range(3):  # retry up to 3 times
+            try:
+                # Clear PyCaret global state before each attempt
+                self._reset_pycaret(task_type)
+
+                if task_type == "classification":
+                    return self._build_classification_model(df, target_column, test_size)
+                elif task_type == "regression":
+                    return self._build_regression_model(df, target_column, test_size)
+                elif task_type == "clustering":
+                    return self._build_clustering_model(df)
+                else:
+                    raise ValueError(f"Unsupported task type: {task_type}")
+
+            except Exception as e:
+                last_error = e
+                print(f"Attempt {attempt + 1} failed: {str(e)} — retrying...")
+                continue
+
+        raise Exception(f"Model building failed after 3 attempts: {str(last_error)}")
+
+    def _reset_pycaret(self, task_type):
+        """Clear PyCaret global state to prevent setup() conflicts"""
         try:
             if task_type == "classification":
-                return self._build_classification_model(df, target_column, test_size)
-
+                from pycaret.classification import ClassificationExperiment
+                exp = ClassificationExperiment()
+                exp._ml_usecase = None
             elif task_type == "regression":
-                return self._build_regression_model(df, target_column, test_size)
-
-            elif task_type == "clustering":
-                return self._build_clustering_model(df)
-            
-            else:
-                raise ValueError(f"Unsupported task type: {task_type}")
-
-        except Exception as e:
-            raise Exception(f"Model building failed: {str(e)}")
+                from pycaret.regression import RegressionExperiment
+                exp = RegressionExperiment()
+                exp._ml_usecase = None
+        except Exception:
+            pass  # if reset fails, just continue
 
     # ============================================================
     # CLASSIFICATION
@@ -75,7 +94,12 @@ class ModelBuilder:
             get_config,
         )
 
-        print("Setting up PyCaret classification...")
+        # Force clear any existing PyCaret session
+        try:
+            from pycaret.classification import ClassificationExperiment
+            _exp = ClassificationExperiment()
+        except Exception:
+            pass
         
         # 1. Sample large datasets
         if len(df) > 5000:
@@ -146,7 +170,12 @@ class ModelBuilder:
             get_config,
         )
 
-        print("Setting up PyCaret regression...")
+        # Force clear any existing PyCaret session
+        try:
+            from pycaret.regression import RegressionExperiment
+            _exp = RegressionExperiment()
+        except Exception:
+            pass
 
         # 1. Sample large datasets
         if len(df) > 5000:
