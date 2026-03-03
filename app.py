@@ -402,6 +402,22 @@ def train_model_section(df, prompt):
                     target_column=task_info['target_column'],
                     task_type=task_info['task_type']
                 )
+
+                # Add report generator and target column to result
+                from backend.ml_engine.report_generator import ReportGenerator
+                report_gen = ReportGenerator()
+                result['report_generator'] = report_gen
+                result['target_column'] = task_info['target_column']
+
+                # Generate charts for display
+                charts = report_gen.generate_visualizations(
+                    metrics=result['metrics'],
+                    feature_importance=result.get('feature_importance', pd.DataFrame()),
+                    predictions=result.get('predictions', pd.DataFrame()),
+                    task_type=result['task_type']
+                )
+                result['charts'] = charts
+
                 # Save artifacts
 
                 from backend.ml_engine.model_persistence import save_artifacts
@@ -504,7 +520,8 @@ def show_results_no_code():
         with col3:
             st.metric("MAE", f"{metrics.get('mae', 0):.2f}")
         with col4:
-            st.metric("MSE", f"{metrics.get('mse', 0):.2f}")
+            rmse = metrics.get('rmse', 0)
+            st.metric("MSE", f"{rmse**2:.2f}")
 
         st.info(f"🤖 Best Model: **{metrics.get('model_name', 'Unknown')}**")
 
@@ -566,7 +583,7 @@ def show_results_no_code():
             )
 
     with col2:
-        if task_type in ['classification', 'regression'] and 'report_generator' in result:
+        if task_type in ['classification', 'regression' ] and 'report_generator' in result:
             if st.button("📄 Generate PDF Report", use_container_width=True):
                 with st.spinner("Generating PDF report..."):
                     try:
@@ -582,9 +599,11 @@ def show_results_no_code():
                         result['report_generator'].generate_pdf_report(
                             output_path=pdf_path,
                             metrics=result['metrics'],
-                            feature_importance=result.get('feature_importance'),
+                            feature_importance=result.get('feature_importance', pd.DataFrame()),
                             task_type=task_type,
-                            dataset_info=dataset_info
+                            dataset_info=dataset_info,
+                            predictions=result.get('predictions'),
+                            df=st.session_state.uploaded_data
                         )
 
                         with open(pdf_path, 'rb') as f:
@@ -619,9 +638,26 @@ def show_results_developer():
     st.info(f"🤖 Model: **{metrics.get('model_name', 'Unknown')}**")
     
     if result['task_type'] == 'classification':
-        st.metric("Accuracy", f"{metrics.get('accuracy', 0):.2%}")
-    else:
-        st.metric("R² Score", f"{metrics.get('r2_score', 0):.4f}")
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("Accuracy", f"{metrics.get('accuracy', 0):.2%}")
+        with col2:
+            st.metric("Precision", f"{metrics.get('precision', 0):.2%}")
+        with col3:
+            st.metric("Recall", f"{metrics.get('recall', 0):.2%}")
+        with col4:
+            st.metric("F1 Score", f"{metrics.get('f1_score', 0):.2%}")
+    elif result['task_type'] == 'regression':
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("R² Score", f"{metrics.get('r2_score', 0):.4f}")
+        with col2:
+            st.metric("RMSE", f"{metrics.get('rmse', 0):.2f}")
+        with col3:
+            st.metric("MAE", f"{metrics.get('mae', 0):.2f}")
+        with col4:
+            rmse = metrics.get('rmse', 0)
+            st.metric("MSE", f"{rmse**2:.2f}")
     
     # Model comparison dropdown
     if result.get('comparison') is not None and not result['comparison'].empty:
@@ -634,145 +670,131 @@ def show_results_developer():
                 use_container_width=True
             )
 
-    # Generate package
-    st.markdown("### 📦 Production Package")
-    
-    # Get feature columns and types
-    feature_columns = st.session_state.uploaded_data.drop(columns=[result['target_column']]).columns.tolist()
-    feature_types = infer_types(st.session_state.uploaded_data.drop(columns=[result['target_column']]))
-    sample_data = st.session_state.uploaded_data.drop(columns=[result['target_column']])
-    
-    # Generate template
-    app_template = generate_app_template(feature_columns, feature_types, sample_data)
-    
-    if st.button("🔨 Generate Python Package", type="primary", use_container_width=True):
-        with st.spinner("Creating production package..."):
-            try:
-                # Create ZIP file
-                zip_buffer = io.BytesIO()
-                
-                with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-                    # Save model
-                    import joblib
-                    model_buffer = io.BytesIO()
-                    joblib.dump(result['model'], model_buffer)
-                    zip_file.writestr('model.pkl', model_buffer.getvalue())
-                    
-                    # Save metrics
-                    metrics_buffer = io.BytesIO()
-                    joblib.dump(result['metrics'], metrics_buffer)
-                    zip_file.writestr('metrics.pkl', metrics_buffer.getvalue())
-                    
-                    # Save feature importance
-                    if not result['feature_importance'].empty:
-                        fi_csv = result['feature_importance'].to_csv(index=False)
-                        zip_file.writestr('feature_importance.csv', fi_csv)
-                    
-                    # Create predict.py script
-                    task_type = result['task_type']
-                    predict_script = f'''"""
-Prediction Script for PromptML Studio Model
-Task Type: {task_type}
-"""
+    # Charts (same as no-code)
+    charts = result.get("charts", {})
+    if charts:
+        st.markdown("### 📈 Visualizations")
+        if result['task_type'] == 'classification':
+            if 'feature_importance' in charts:
+                st.plotly_chart(charts['feature_importance'], use_container_width=True)
+            col1, col2 = st.columns(2)
+            with col1:
+                if 'confusion_matrix' in charts:
+                    st.plotly_chart(charts['confusion_matrix'], use_container_width=True)
+            with col2:
+                if 'metrics_comparison' in charts:
+                    st.plotly_chart(charts['metrics_comparison'], use_container_width=True)
+        elif result['task_type'] == 'regression':
+            col1, col2 = st.columns(2)
+            with col1:
+                if 'actual_vs_predicted' in charts:
+                    st.plotly_chart(charts['actual_vs_predicted'], use_container_width=True)
+            with col2:
+                if 'residuals' in charts:
+                    st.plotly_chart(charts['residuals'], use_container_width=True)
 
-import pandas as pd
-import joblib
-import sys
+    # Downloads section
+    st.markdown("### 📥 Download Results")
+    col1, col2, col3 = st.columns(3)
 
-def load_model(model_path='model.pkl'):
-    """Load trained model"""
-    return joblib.load(model_path)
+    # Col 1 — Predictions CSV
+    with col1:
+        if "predictions" in result:
+            predictions_csv = result['predictions'].to_csv(index=False)
+            st.download_button(
+                label="📊 Download Predictions CSV",
+                data=predictions_csv,
+                file_name=f"predictions_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                mime="text/csv",
+                use_container_width=True
+            )
 
-def predict(model, data_path):
-    """Make predictions on new data"""
-    # Load data
-    df = pd.read_csv(data_path)
-    
-    # Make predictions
-    try:
-        from pycaret.{task_type} import predict_model
-        predictions = predict_model(model, data=df)
-    except:
-        # Fallback to sklearn
-        predictions = model.predict(df)
-        df['prediction'] = predictions
-        predictions = df
-    
-    return predictions
+    # Col 2 — PDF Report (same as no-code)
+    with col2:
+        if result['task_type'] in ['classification', 'regression'] and 'report_generator' in result:
+            if st.button("📄 Generate PDF Report", use_container_width=True, key="dev_pdf_btn"):
+                with st.spinner("Generating PDF report..."):
+                    try:
+                        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_file:
+                            pdf_path = tmp_file.name
 
-if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: python predict.py <data.csv>")
-        sys.exit(1)
-    
-    # Load model
-    model = load_model()
-    
-    # Make predictions
-    predictions = predict(model, sys.argv[1])
-    
-    # Save results
-    output_path = "predictions_output.csv"
-    predictions.to_csv(output_path, index=False)
-    
-    print(f"Predictions saved to {{output_path}}")
-    print(f"Predicted {{len(predictions)}} samples")
-'''
-                    zip_file.writestr('predict.py', predict_script)
-                    
-                    # Create requirements.txt
-                    requirements = "pandas==2.0.3\nnumpy==1.24.3\nscikit-learn==1.3.0\npycaret==3.1.0\njoblib==1.3.2\n"
-                    zip_file.writestr('requirements.txt', requirements)
-                    
-                    # Create README
-                    task_type_title = result['task_type'].title()
-                    model_name = metrics.get('model_name', 'Unknown')
-                    gen_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                    
-                    readme = f"# PromptML Studio - Production Model Package\n\n## Model Information\n- **Task Type**: {task_type_title}\n- **Model**: {model_name}\n- **Generated**: {gen_time}\n\n## Performance Metrics\n"
-                    
-                    if result['task_type'] == 'classification':
-                        accuracy = metrics.get('accuracy', 0)
-                        precision = metrics.get('precision', 0)
-                        recall = metrics.get('recall', 0)
-                        f1 = metrics.get('f1_score', 0)
-                        readme += f"- Accuracy: {accuracy:.2%}\n- Precision: {precision:.2%}\n- Recall: {recall:.2%}\n- F1 Score: {f1:.2%}\n"
-                    else:
-                        r2 = metrics.get('r2_score', 0)
-                        rmse = metrics.get('rmse', 0)
-                        mae = metrics.get('mae', 0)
-                        readme += f"- R2 Score: {r2:.4f}\n- RMSE: {rmse:.4f}\n- MAE: {mae:.4f}\n"
-                    
-                    readme += "\n## Installation\n\n```bash\npip install -r requirements.txt\n```\n\n## Usage\n\n### Make Predictions\n\n```bash\npython predict.py your_data.csv\n```\n\n### Load Model in Python\n\n```python\nimport joblib\nmodel = joblib.load('model.pkl')\n```\n\n## Files Included\n- `model.pkl` - Trained model\n- `metrics.pkl` - Performance metrics\n- `feature_importance.csv` - Feature importance scores\n- `predict.py` - Prediction script\n- `requirements.txt` - Python dependencies\n- `README.md` - This file\n\n---\nGenerated by PromptML Studio\n"
-                    zip_file.writestr('README.md', readme)
-                
-                # Download button
-                zip_buffer.seek(0)
-                st.download_button(
-                    label="⬇️ Download Complete Package (ZIP)",
-                    data=zip_buffer.getvalue(),
-                    file_name=f"promptml_package_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip",
-                    mime="application/zip",
-                    use_container_width=True
-                )
-                
-                st.success("✅ Package created successfully!")
-                
-                # Show package contents
-                with st.expander("📦 Package Contents"):
-                    st.markdown("""
-                    - `model.pkl` - Trained model file
-                    - `metrics.pkl` - Performance metrics
-                    - `feature_importance.csv` - Feature importance
-                    - `predict.py` - Ready-to-use prediction script
-                    - `requirements.txt` - Python dependencies
-                    - `README.md` - Documentation
-                    """)
-                
-            except Exception as e:
-                st.error(f"Error creating package: {str(e)}")
-                st.exception(e)
+                        dataset_info = {
+                            'n_samples': len(st.session_state.uploaded_data),
+                            'n_features': len(st.session_state.uploaded_data.columns),
+                            'target_column': result.get('target_column')
+                        }
 
+                        result['report_generator'].generate_pdf_report(
+                            output_path=pdf_path,
+                            metrics=result['metrics'],
+                            feature_importance=result.get('feature_importance', pd.DataFrame()),
+                            task_type=result['task_type'],
+                            dataset_info=dataset_info,
+                            predictions=result.get('predictions'),
+                            df=st.session_state.uploaded_data
+                        )
+
+                        with open(pdf_path, 'rb') as f:
+                            pdf_data = f.read()
+
+                        st.download_button(
+                            label="⬇️ Download PDF Report",
+                            data=pdf_data,
+                            file_name=f"promptml_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
+                            mime="application/pdf",
+                            use_container_width=True
+                        )
+
+                        os.unlink(pdf_path)
+
+                    except Exception as e:
+                        st.error(f"Error generating PDF: {str(e)}")
+
+    # Col 3 — Python Package ZIP
+    with col3:
+        if st.button("🔨 Generate Python Package", use_container_width=True, key="dev_pkg_btn"):
+            with st.spinner("Creating production package..."):
+                try:
+                    feature_columns = st.session_state.uploaded_data.drop(columns=[result['target_column']]).columns.tolist()
+                    feature_types = infer_types(st.session_state.uploaded_data.drop(columns=[result['target_column']]))
+                    sample_data = st.session_state.uploaded_data.drop(columns=[result['target_column']])
+                    app_template = generate_app_template(feature_columns, feature_types, sample_data)
+
+                    zip_buffer = io.BytesIO()
+                    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+                        import joblib
+                        model_buffer = io.BytesIO()
+                        joblib.dump(result['model'], model_buffer)
+                        zip_file.writestr('model.pkl', model_buffer.getvalue())
+
+                        metrics_buffer = io.BytesIO()
+                        joblib.dump(result['metrics'], metrics_buffer)
+                        zip_file.writestr('metrics.pkl', metrics_buffer.getvalue())
+
+                        if not result['feature_importance'].empty:
+                            zip_file.writestr('feature_importance.csv', result['feature_importance'].to_csv(index=False))
+
+                        task_type = result['task_type']
+                        predict_script = f'''"""Prediction Script - PromptML Studio\nTask: {task_type}"""\nimport pandas as pd\nimport joblib\nimport sys\n\nmodel = joblib.load("model.pkl")\n\ndef predict(data_path):\n    df = pd.read_csv(data_path)\n    try:\n        from pycaret.{task_type} import predict_model\n        return predict_model(model, data=df)\n    except:\n        preds = model.predict(df)\n        df["prediction"] = preds\n        return df\n\nif __name__ == "__main__":\n    result = predict(sys.argv[1])\n    result.to_csv("predictions_output.csv", index=False)\n    print(f"Done! {{len(result)}} predictions saved.")\n'''
+                        zip_file.writestr('predict.py', predict_script)
+                        zip_file.writestr('requirements.txt', "pandas\nnumpy\nscikit-learn\npycaret==3.3.2\njoblib\n")
+
+                        readme = f"# PromptML Model Package\n**Task:** {task_type.title()}\n**Model:** {metrics.get('model_name','Unknown')}\n\n## Run\n```bash\npip install -r requirements.txt\npython predict.py your_data.csv\n```\n"
+                        zip_file.writestr('README.md', readme)
+
+                    zip_buffer.seek(0)
+                    st.download_button(
+                        label="⬇️ Download Package (ZIP)",
+                        data=zip_buffer.getvalue(),
+                        file_name=f"promptml_package_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip",
+                        mime="application/zip",
+                        use_container_width=True
+                    )
+                    st.success("✅ Package ready!")
+
+                except Exception as e:
+                    st.error(f"Error: {str(e)}")
+                    st.exception(e)
 
 def main():
 
