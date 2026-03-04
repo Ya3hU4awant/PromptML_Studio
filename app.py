@@ -5,6 +5,7 @@ AI-Powered AutoML Platform with Dual-Mode Interface
 import requests
 
 import streamlit as st
+st.set_page_config(page_title="PromptML Studio", layout="wide")
 import shutil
 import pandas as pd
 import numpy as np
@@ -201,11 +202,7 @@ docker run -p 8501:8501 my-model-app
 
 
 
-# Page configuration
-st.set_page_config(
-    page_title="PromptML Studio",
-    layout="wide"
-)
+# Load custom CSS
 
 # Load custom CSS
 def load_css():
@@ -795,6 +792,26 @@ def show_results_developer():
                 except Exception as e:
                     st.error(f"Error: {str(e)}")
                     st.exception(e)
+def run_generated_app():
+    """Run the generated application preview."""
+    if st.session_state.get("preview_html"):
+        import streamlit.components.v1 as components
+        components.html(st.session_state["preview_html"], height=700, scrolling=True)
+    else:
+        st.warning("⚠️ Preview not generated. Please build the website first in the 'Deploy as Website' section.")
+
+def deploy_to_render():
+    """Deployment to Render placeholder."""
+    st.info("🚀 **Render Deployment feature coming soon!**")
+    st.markdown("""
+    To deploy to Render now:
+    1. Download the **Website ZIP** from the Studio.
+    2. Upload it to a GitHub repository.
+    3. Connect the repository to [Render.com](https://render.com).
+    
+    Refer to **DEPLOYMENT.md** for more details.
+    """)
+
 
 def main():
 
@@ -804,6 +821,44 @@ def main():
 
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
+
+    # Preview Mode Session
+    if "preview_mode" not in st.session_state:
+        st.session_state.preview_mode = False
+
+    # ==============================
+    # FULL SCREEN PREVIEW MODE
+    # ==============================
+    if st.session_state.preview_mode:
+
+        # Hide header + footer
+        st.markdown("""
+            <style>
+                header {visibility: hidden;}
+                footer {visibility: hidden;}
+                .block-container {padding-top: 1rem;}
+            </style>
+        """, unsafe_allow_html=True)
+
+        # 🔹 RUN GENERATED APP
+        run_generated_app()   # <-- ye tumhara existing function hona chahiye
+
+        st.divider()
+
+        col1, col2 = st.columns(2)
+
+        # 🔙 Back Button
+        with col1:
+            if st.button("⬅ Back to Studio"):
+                st.session_state.preview_mode = False
+                st.rerun()
+
+        # 🚀 Deploy Button
+        with col2:
+            if st.button("🚀 Deploy to Render"):
+                deploy_to_render()   # existing deployment function
+
+        st.stop()
 
     # ---------- SIDEBAR ----------
     with st.sidebar:
@@ -1105,10 +1160,11 @@ STYLE:
                                 )
 
                         with btn_col2:
-                            if st.button("👁️ Preview Website", use_container_width=True):
-                                st.session_state["show_preview"] = not st.session_state.get("show_preview", False)
+                            if st.button("👁️ Preview / Deploy"):
+                                st.session_state.preview_mode = True
+                                st.rerun()
 
-                        if st.session_state.get("show_preview") and st.session_state.get("preview_html"):
+                        if st.session_state.preview_mode and st.session_state.get("preview_html"):
                             st.markdown("#### 🖥️ Website Preview")
                             st.caption("This is how your deployed app will look. Fill the form and click Predict to try it.")
                             import streamlit.components.v1 as components
