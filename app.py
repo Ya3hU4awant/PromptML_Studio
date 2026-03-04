@@ -22,13 +22,12 @@ warnings.filterwarnings('ignore')
 
 # Add backend to path
 sys.path.append(str(Path(__file__).parent))
-
+from about import show_about_page
 from backend.ml_engine.prompt_parser import PromptParser
 from backend.ml_engine.model_builder import ModelBuilder
 from backend.ml_engine.report_generator import ReportGenerator
 from backend.ml_engine.website_generator import generate_website
 from backend.predictor import Predictor
-
 
 # ---------- Web App Generator Helpers ----------
 
@@ -212,9 +211,8 @@ def load_css():
     """Load custom CSS styling"""
     css_path = Path(__file__).parent / "static" / "style.css"
     if css_path.exists():
-        with open(css_path) as f:
+        with open(css_path, encoding='utf-8') as f:
             st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
-
 load_css()
 
 # Initialize session state
@@ -796,7 +794,54 @@ def show_results_developer():
                     st.error(f"Error: {str(e)}")
                     st.exception(e)
 
+def show_footer():
+    """Display professional footer"""
+    footer_html = """
+<div class="pml-footer">
+    <div class="pml-footer-grid">
+        <div class="pml-footer-brand">
+            <div class="pml-footer-logo">&#x1F916; PromptML Studio</div>
+            <div class="pml-footer-tagline">Democratizing AI/ML for everyone.</div>
+        </div>
+        <div class="pml-footer-col">
+            <div class="pml-footer-col-title">Platform</div>
+            <ul class="pml-footer-links">
+                <li><a href="?page=about" target="_self">About <span class="pml-link-arrow">&#x203A;</span></a></li>
+                <li><a href="#">How It Works <span class="pml-link-arrow">&#x203A;</span></a></li>
+                <li><a href="#">Features <span class="pml-link-arrow">&#x203A;</span></a></li>
+            </ul>
+        </div>
+        <div class="pml-footer-col">
+            <div class="pml-footer-col-title">Support</div>
+            <ul class="pml-footer-links">
+                <li><a href="mailto:support@promptml.ai">Contact <span class="pml-link-arrow">&#x203A;</span></a></li>
+            </ul>
+        </div>
+        <div class="pml-footer-col">
+            <div class="pml-footer-col-title">Resources</div>
+            <ul class="pml-footer-links">
+                <li><a href="https://github.com" target="_blank">GitHub <span class="pml-link-arrow">&#x203A;</span></a></li>
+                <li><a href="#" target="_blank">Documentation <span class="pml-link-arrow">&#x203A;</span></a></li>
+                <li><a href="#" target="_blank">Privacy Policy <span class="pml-link-arrow">&#x203A;</span></a></li>
+            </ul>
+        </div>
+    </div>
+    <hr class="pml-footer-divider">
+    <div class="pml-footer-bottom">
+        <div class="pml-footer-copy">&#169; 2026 <span>PromptML Studio</span>. All rights reserved.</div>
+    </div>
+</div>
+"""
+    st.markdown(footer_html, unsafe_allow_html=True)
+
+
 def main():
+    # Page router — handle About link
+    params = st.query_params
+    if params.get("page") == "about":
+        st.session_state.current_page = "about"
+    elif params.get("page") == "home":
+        st.session_state.current_page = "home"
 
     # ---------- SESSION STATE (TOP) ----------
     if "mode" not in st.session_state:
@@ -804,6 +849,9 @@ def main():
 
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
+
+    if 'current_page' not in st.session_state:
+        st.session_state.current_page = "home"
 
     # ---------- SIDEBAR ----------
     with st.sidebar:
@@ -1038,15 +1086,15 @@ STYLE:
         production-ready ML models!
         """)
         
-        st.markdown("---")
-        st.markdown("### 🎓 AIML Diploma Project")
-        st.markdown("Made with ❤️ for democratizing AI/ML")
     
     # Main content
-    if st.session_state.mode is None:
+    if st.session_state.current_page == "about":
+        show_about_page()
+
+    elif st.session_state.mode is None:
         show_hero_section()
         show_mode_selector()
-    
+
     else:
         # Show header
         st.title(f"{'📱 No-Code' if st.session_state.mode == 'no-code' else '💻 Developer'} Mode")
@@ -1117,6 +1165,8 @@ STYLE:
                                 height=520,
                                 scrolling=True,
                             )
+    # Footer
+    show_footer()
 
                 
 if __name__ == "__main__":
