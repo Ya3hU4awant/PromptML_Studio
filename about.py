@@ -7,10 +7,17 @@ import streamlit as st
 def show_about_page():
     """Render the full About page"""
 
+    # Import navigate_to from app — works because app.py defines it at module level
+    # We use session_state directly to avoid circular import
+    def go_home():
+        st.session_state.current_page = "home"
+        st.session_state.mode = None
+        st.query_params.clear()
+        st.rerun()
+
     st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700;800&display=swap');
-
     .about-hero {
         background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
         border-radius: 16px;
@@ -77,7 +84,6 @@ def show_about_page():
     .about-text-card p { margin-bottom: 12px; }
     .about-text-card p:last-child { margin-bottom: 0; }
     .about-text-card strong { color: #c5caff; font-weight: 600; }
-
     .stats-bar {
         display: grid;
         grid-template-columns: repeat(4, 1fr);
@@ -109,7 +115,6 @@ def show_about_page():
         text-transform: uppercase;
         letter-spacing: 0.8px;
     }
-
     .belief-grid {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
@@ -146,7 +151,6 @@ def show_about_page():
         color: #777;
         line-height: 1.6;
     }
-
     .team-wrapper {
         display: grid;
         grid-template-columns: 3fr 2fr;
@@ -263,14 +267,32 @@ def show_about_page():
         border-top: 1px solid rgba(255,255,255,0.05);
         padding-top: 12px;
     }
+    /* Back button styling */
+    div[data-testid="stButton"].back-btn > button {
+        background: rgba(102,126,234,0.1) !important;
+        border: 1px solid rgba(102,126,234,0.3) !important;
+        color: #8899ee !important;
+        font-size: 0.85rem !important;
+        font-family: 'Inter', sans-serif !important;
+        border-radius: 8px !important;
+        padding: 6px 16px !important;
+        transition: all 0.2s ease !important;
+    }
+    div[data-testid="stButton"].back-btn > button:hover {
+        background: rgba(102,126,234,0.2) !important;
+        color: #c5caff !important;
+        transform: none !important;
+        box-shadow: none !important;
+    }
     </style>
     """, unsafe_allow_html=True)
 
-    # ── Back button ──────────────────────────────────────────
+    # ── Top Back Button ──────────────────────────────────────
+    st.markdown('<div class="back-btn">', unsafe_allow_html=True)
     if st.button("← Back to PromptML Studio", key="about_back_top"):
-        st.session_state.current_page = "home"
-        st.session_state.mode = None
-        st.rerun()
+        go_home()
+    st.markdown('</div>', unsafe_allow_html=True)
+
     st.markdown("<br>", unsafe_allow_html=True)
 
     # ── Hero ─────────────────────────────────────────────────
@@ -333,7 +355,7 @@ def show_about_page():
         <strong>Government Polytechnic, Chhatrapati Sambhajinagar</strong>, passionate about
         AI and Machine Learning. This project was born from a shared belief that the power of
         machine learning should not be locked behind years of programming expertise.</p>
-        <p>Guided by our advisor <strong>N.M. Masuldar</strong>, Lecturer at Government Polytechnic,
+        <p>Guided by our advisor <strong>Respected N.M. Masuldar</strong>, Lecturer at Government Polytechnic,
         we designed and built PromptML Studio as our AIML Diploma Project — combining real-world
         software engineering, cloud deployment, and modern AI tooling into one cohesive platform.</p>
     </div>
@@ -353,26 +375,26 @@ def show_about_page():
         <div class="belief-card">
             <div class="belief-icon">&#x26A1;</div>
             <div class="belief-title">Speed Without Compromise</div>
-            <div class="belief-text">AutoML removes repetitive work so users can focus on the
-            problem that actually matters — not the pipeline.</div>
+            <div class="belief-text">AutoML removes repetitive work so users focus on the
+            problem that matters — not the pipeline.</div>
         </div>
         <div class="belief-card">
             <div class="belief-icon">&#x1F50D;</div>
             <div class="belief-title">Transparency</div>
             <div class="belief-text">Every model decision is explainable. Feature importance,
-            business inferences, and honest limitations built into every report.</div>
+            business inferences, and honest limitations in every report.</div>
         </div>
         <div class="belief-card">
             <div class="belief-icon">&#x1F3D7;</div>
             <div class="belief-title">Production Readiness</div>
             <div class="belief-text">A model that cannot be deployed is just an experiment.
-            We build tools that go from CSV to live API in minutes.</div>
+            CSV to live API in minutes, not weeks.</div>
         </div>
         <div class="belief-card">
             <div class="belief-icon">&#x1F91D;</div>
             <div class="belief-title">Human + AI Collaboration</div>
             <div class="belief-text">AI should augment human decision-making, not replace it.
-            Our platform keeps humans in control with clear, actionable outputs.</div>
+            Clear, actionable outputs keep humans in control.</div>
         </div>
         <div class="belief-card">
             <div class="belief-icon">&#x1F4DA;</div>
@@ -388,13 +410,13 @@ def show_about_page():
     st.markdown('<div class="about-section-line"></div>', unsafe_allow_html=True)
 
     team = [
-        ("Yash Udawant",     "YU", "ML Engineer",             "linear-gradient(135deg,#667eea,#764ba2)"),
-        ("Shubham Hajare",   "SH", "Backend Developer",       "linear-gradient(135deg,#11998e,#38ef7d)"),
-        ("Tamanna Shaikh",   "TS", "Data Scientist",          "linear-gradient(135deg,#e96c6c,#c0392b)"),
-        ("Gangotri Borade",  "GB", "UI/UX Designer",          "linear-gradient(135deg,#f7971e,#ffd200)"),
-        ("Pratik Pawar",     "PP", "ML Engineer",             "linear-gradient(135deg,#00b4d8,#0077b6)"),
-        ("Sanskar Sutawane", "SS", "Full Stack Developer",    "linear-gradient(135deg,#a18cd1,#fbc2eb)"),
-        ("Rani Gaikwad",     "RG", "Data Analyst",            "linear-gradient(135deg,#43e97b,#38f9d7)"),
+        ("Yash Udawant",     "YU", "ML Engineer",          "linear-gradient(135deg,#667eea,#764ba2)"),
+        ("Shubham Hajare",   "SH", "Backend Developer",    "linear-gradient(135deg,#11998e,#38ef7d)"),
+        ("Tamanna Shaikh",   "TS", "Data Scientist",       "linear-gradient(135deg,#e96c6c,#c0392b)"),
+        ("Gangotri Borade",  "GB", "UI/UX Designer",       "linear-gradient(135deg,#f7971e,#ffd200)"),
+        ("Pratik Pawar",     "PP", "ML Engineer",          "linear-gradient(135deg,#00b4d8,#0077b6)"),
+        ("Sanskar Sutawane", "SS", "Full Stack Developer", "linear-gradient(135deg,#a18cd1,#fbc2eb)"),
+        ("Rani Gaikwad",     "RG", "Data Analyst",         "linear-gradient(135deg,#43e97b,#38f9d7)"),
     ]
 
     team_html = '<div class="team-grid">'
@@ -434,7 +456,10 @@ def show_about_page():
     </div>
     """, unsafe_allow_html=True)
 
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # ── Bottom Back Button ────────────────────────────────────
+    st.markdown('<div class="back-btn">', unsafe_allow_html=True)
     if st.button("← Back to PromptML Studio", key="about_back_bottom"):
-        st.session_state.current_page = "home"
-        st.session_state.mode = None
-        st.rerun()
+        go_home()
+    st.markdown('</div>', unsafe_allow_html=True)
