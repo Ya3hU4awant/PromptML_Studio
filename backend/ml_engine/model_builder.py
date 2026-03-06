@@ -105,6 +105,15 @@ class ModelBuilder:
         if len(df) > 5000:
             df = df.sample(n=5000, random_state=42)
 
+        # 2. Drop rows where target column has missing values
+        original_count = len(df)
+        df = df.dropna(subset=[target_column])
+        dropped = original_count - len(df)
+        if dropped > 0:
+            print(f"[INFO] Dropped {dropped} rows with missing target values in '{target_column}'")
+        if len(df) < 10:
+            raise Exception(f"Only {len(df)} rows remain after removing missing target values. Please provide a cleaner dataset.")
+
         self.setup_config = setup(
             data=df,
             target=target_column,
@@ -180,6 +189,15 @@ class ModelBuilder:
         # 1. Sample large datasets
         if len(df) > 5000:
             df = df.sample(n=5000, random_state=42)
+
+        # 2. Drop rows where target column has missing values
+        original_count = len(df)
+        df = df.dropna(subset=[target_column])
+        dropped = original_count - len(df)
+        if dropped > 0:
+            print(f"[INFO] Dropped {dropped} rows with missing target values in '{target_column}'")
+        if len(df) < 10:
+            raise Exception(f"Only {len(df)} rows remain after removing missing target values. Please provide a cleaner dataset.")
 
         self.setup_config = setup(
             data=df,
