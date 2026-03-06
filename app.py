@@ -31,6 +31,19 @@ from features import show_features_page
 from contact import show_contact_page
 from privacy import show_privacy_page
 
+# ── Cached singletons — instantiated once, reused across reruns ──
+@st.cache_resource
+def get_prompt_parser():
+    return PromptParser()
+
+@st.cache_resource
+def get_model_builder():
+    return ModelBuilder()
+
+@st.cache_resource
+def get_report_generator():
+    return ReportGenerator()
+
 # ─────────────────────────────────────────────────────────────
 # NAVIGATION HELPER  — use this everywhere instead of
 # touching st.session_state.current_page directly
@@ -299,17 +312,16 @@ def train_model_section(df, prompt):
                 status_text = st.empty()
                 status_text.text("🔍 Parsing your prompt...")
                 progress_bar.progress(20)
-                parser = PromptParser()
+                parser = get_prompt_parser()
                 task_info = parser.parse_prompt(prompt, df)
                 st.info(f"✅ Detected Task: **{task_info['task_type'].title()}**")
                 st.info(f"✅ Target Column: **{task_info['target_column']}**")
                 st.info(f"✅ Confidence: **{task_info['confidence']:.0%}**")
                 status_text.text("🏗️ Training multiple ML models...")
                 progress_bar.progress(40)
-                builder = ModelBuilder()
+                builder = get_model_builder()
                 result = builder.build_model(df=df, target_column=task_info['target_column'], task_type=task_info['task_type'])
-                from backend.ml_engine.report_generator import ReportGenerator
-                report_gen = ReportGenerator()
+                report_gen = get_report_generator()
                 result['report_generator'] = report_gen
                 result['target_column'] = task_info['target_column']
                 charts = report_gen.generate_visualizations(
