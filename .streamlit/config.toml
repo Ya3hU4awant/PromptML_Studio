@@ -1,7 +1,7 @@
 [theme]
-primaryColor = "#FF4B4B"
+primaryColor = "#667eea"
 backgroundColor = "#0E1117"
-secondaryBackgroundColor = "#262730"
+secondaryBackgroundColor = "#13132a"
 textColor = "#FAFAFA"
 font = "sans serif"
 
@@ -9,6 +9,15 @@ font = "sans serif"
 headless = true
 enableCORS = false
 port = 10000
+maxUploadSize = 10
+enableWebsocketCompression = true
 
 [browser]
 gatherUsageStats = false
+
+[runner]
+fastReruns = true
+
+[client]
+showErrorDetails = false
+toolbarMode = "minimal"
