@@ -8,8 +8,6 @@ font = "sans serif"
 [server]
 headless = true
 enableCORS = false
-port = 10000
-maxUploadSize = 10
 enableWebsocketCompression = true
 
 [browser]
@@ -21,3 +19,16 @@ fastReruns = true
 [client]
 showErrorDetails = false
 toolbarMode = "minimal"
+```
+
+But now **Render will break** because it needs `port = 10000`.
+
+---
+
+**Solution — use environment variable for port instead.**
+
+Render automatically sets a `PORT` environment variable. Update your Render start command to pass the port directly, so `config.toml` doesn't need it at all.
+
+In Render dashboard → your service → Settings → Start Command, change to:
+```
+streamlit run app.py --server.port=10000 --server.address=0.0.0.0
