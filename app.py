@@ -715,7 +715,7 @@ Be friendly, use simple analogies, bullet points, and always end with 1 actionab
                 st.session_state.chat_history.append({"role": "user", "content": refine_q})
                 try:
                     from groq import Groq
-                    groq_client = Groq(api_key=os.environ["GROQ_API_KEY"])
+                    groq_client = Groq(api_key=os.environ.get("GROQ_API_KEY") or st.secrets.get("GROQ_API_KEY", ""))
                     resp = groq_client.chat.completions.create(
                         model="llama-3.3-70b-versatile", max_tokens=1024,
                         messages=[{"role": "system", "content": system_prompt},
@@ -748,7 +748,7 @@ Be friendly, use simple analogies, bullet points, and always end with 1 actionab
                 st.session_state.chat_history.append({"role": "user", "content": question})
                 try:
                     from groq import Groq
-                    groq_client = Groq(api_key=os.environ["GROQ_API_KEY"])
+                    groq_client = Groq(api_key=os.environ.get("GROQ_API_KEY") or st.secrets.get("GROQ_API_KEY", ""))
                     resp = groq_client.chat.completions.create(
                         model="llama-3.3-70b-versatile", max_tokens=1024,
                         messages=[{"role": "system", "content": system_prompt},
@@ -771,7 +771,7 @@ Be friendly, use simple analogies, bullet points, and always end with 1 actionab
             st.session_state.chat_history.append({"role": "user", "content": user_input.strip()})
             try:
                 from groq import Groq
-                groq_client = Groq(api_key=os.environ["GROQ_API_KEY"])
+                groq_client = Groq(api_key=os.environ.get("GROQ_API_KEY") or st.secrets.get("GROQ_API_KEY", ""))
                 resp = groq_client.chat.completions.create(
                     model="llama-3.3-70b-versatile", max_tokens=1024,
                     messages=[{"role": "system", "content": system_prompt},
