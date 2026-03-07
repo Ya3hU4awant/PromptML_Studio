@@ -1,16 +1,18 @@
 """
 PromptML Studio - Model Builder
-Optimised for Render Free Tier:
-- Fast cold starts
-- Correct model selection (no lr forced for classification)
-- Smart model pool: fast + accurate models only
+Optimised for Streamlit Cloud + Render Free Tier:
+- Uses include= instead of exclude= to prevent OOM (Broken pipe)
+- gc.collect() after data prep to free memory before training
+- Correct model selection (rf/et wins over lr on real datasets)
 - Auto-clean missing target values
+- Adaptive fold count for tiny datasets
 """
 import os
 os.environ["OPENBLAS_NUM_THREADS"] = "1"
 os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["MKL_NUM_THREADS"] = "1"
 
+import gc
 import pandas as pd
 import numpy as np
 import joblib
@@ -18,34 +20,29 @@ import warnings
 warnings.filterwarnings("ignore")
 
 
-# ── Fast model pools ────────────────────────────────────────────
-# Classification: excluded slow/heavy models, kept best performers
-# lr = logistic regression (fine for classification, NOT linear regression)
-# BUT we also keep rf, et, dt, nb, ridge, lda so AutoML picks the TRUE best
-CLASSIFICATION_EXCLUDE = [
-    "svm",   # slow on free tier
-    "mlp",   # slow neural net
-    "gbc",   # gradient boosting slow
-    "xgboost",  # heavy
-    "lightgbm", # heavy
-    "catboost", # heavy
-    "ada",   # slow ensemble
-    "qda",   # unstable on small data
-]
+# ── Lightweight model pools ──────────────────────────────────────
+# Using include= (not exclude=) so PyCaret ONLY loads these models
+# into memory — prevents the Broken Pipe / OOM kill on free tier.
+#
+# Classification pool — 7 fast, accurate, memory-light models:
+#   lr    = Logistic Regression
+#   dt    = Decision Tree
+#   rf    = Random Forest      ← usually wins on real datasets
+#   et    = Extra Trees        ← usually wins on real datasets
+#   ridge = Ridge Classifier
+#   lda   = Linear Discriminant Analysis
+#   nb    = Naive Bayes
+CLASSIFICATION_INCLUDE = ["lr", "dt", "rf", "et", "ridge", "lda", "nb"]
 
-# Regression: keep fast accurate models
-REGRESSION_EXCLUDE = [
-    "svm",
-    "mlp",
-    "gbr",
-    "xgboost",
-    "lightgbm",
-    "catboost",
-    "ard",   # slow bayesian
-    "par",   # unstable
-    "omp",   # unstable
-    "huber", # slow
-]
+# Regression pool — 7 fast, accurate, memory-light models:
+#   lr    = Linear Regression
+#   dt    = Decision Tree
+#   rf    = Random Forest
+#   et    = Extra Trees
+#   ridge = Ridge Regression
+#   lasso = Lasso Regression
+#   en    = ElasticNet
+REGRESSION_INCLUDE = ["lr", "dt", "rf", "et", "ridge", "lasso", "en"]
 
 
 class ModelBuilder:
@@ -81,6 +78,7 @@ class ModelBuilder:
             except Exception as e:
                 last_error = e
                 print(f"[WARN] Attempt {attempt + 1} failed: {str(e)}")
+                gc.collect()
                 continue
 
         raise Exception(f"Model building failed after 3 attempts: {str(last_error)}")
@@ -101,7 +99,7 @@ class ModelBuilder:
     # ============================================================
 
     def _prepare_df(self, df, target_column):
-        """Sample + clean target NaNs — shared by classification & regression."""
+        """Sample + clean target NaNs + free memory before training."""
         if len(df) > 5000:
             df = df.sample(n=5000, random_state=42)
 
@@ -115,6 +113,9 @@ class ModelBuilder:
                 f"Only {len(df)} rows remain after removing missing target values. "
                 "Please provide a cleaner dataset."
             )
+
+        # Free memory before heavy PyCaret setup
+        gc.collect()
         return df
 
     # ============================================================
@@ -129,7 +130,7 @@ class ModelBuilder:
 
         df = self._prepare_df(df, target_column)
 
-        # Adaptive fold count — prevents error on tiny datasets
+        # Adaptive fold count — prevents CV error on tiny datasets
         n_folds = min(3, max(2, len(df) // 10))
 
         self.setup_config = setup(
@@ -140,21 +141,22 @@ class ModelBuilder:
             verbose=False,
             n_jobs=1,
             preprocess=True,
-            # Speed: disable heavy transformers
             normalize=True,
-            transformation=False,
-            pca=False,
+            transformation=False,       # skip — saves memory + time
+            pca=False,                  # skip — not needed for < 50 features
             remove_multicollinearity=False,
             polynomial_features=False,
         )
 
+        # include= loads ONLY these 7 models — prevents OOM/Broken pipe
         best_model = compare_models(
             n_select=1,
-            sort="F1",           # F1 is better than raw Accuracy — avoids class-imbalance bias
+            sort="F1",              # F1 avoids class-imbalance bias vs Accuracy
             fold=n_folds,
-            exclude=CLASSIFICATION_EXCLUDE,
-            budget_time=1.5,     # slightly more time → better model than lr every time
-            turbo=True,          # PyCaret turbo mode skips slow models automatically
+            include=CLASSIFICATION_INCLUDE,
+            budget_time=2.0,
+            turbo=True,
+            errors="ignore",        # skip any model that crashes instead of failing all
         )
 
         comparison_df = pull()
@@ -172,6 +174,8 @@ class ModelBuilder:
 
         self.metrics = self._extract_classification_metrics(predictions, test_labels, comparison_df)
         self.feature_importance = self._get_feature_importance(self.model, df, target_column)
+
+        gc.collect()
 
         return {
             "model": self.model,
@@ -211,13 +215,15 @@ class ModelBuilder:
             polynomial_features=False,
         )
 
+        # include= loads ONLY these 7 models — prevents OOM/Broken pipe
         best_model = compare_models(
             n_select=1,
             sort="R2",
             fold=n_folds,
-            exclude=REGRESSION_EXCLUDE,
-            budget_time=1.5,
+            include=REGRESSION_INCLUDE,
+            budget_time=2.0,
             turbo=True,
+            errors="ignore",
         )
 
         comparison_df = pull()
@@ -235,6 +241,8 @@ class ModelBuilder:
 
         self.metrics = self._extract_regression_metrics(predictions, test_labels, comparison_df)
         self.feature_importance = self._get_feature_importance(self.model, df, target_column)
+
+        gc.collect()
 
         return {
             "model": self.model,
@@ -282,6 +290,8 @@ class ModelBuilder:
 
         self.metrics = {"n_clusters": k, "algorithm": "KMeans",
                         "silhouette_score": round(score, 4)}
+
+        gc.collect()
 
         return {
             "model": model,
@@ -362,13 +372,11 @@ class ModelBuilder:
             elif hasattr(actual_model, "coef_"):
                 importances = np.abs(actual_model.coef_).flatten()
             else:
-                # Uniform fallback
                 return pd.DataFrame({
                     "feature": feature_names,
                     "importance": [1 / len(feature_names)] * len(feature_names),
                 })
 
-            # Align lengths safely
             min_len = min(len(feature_names), len(importances))
             return pd.DataFrame({
                 "feature": feature_names[:min_len],
