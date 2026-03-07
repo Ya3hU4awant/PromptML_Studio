@@ -192,13 +192,21 @@ def load_css():
             st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
     st.markdown("""
     <style>
+    /* Hide Streamlit branding but keep sidebar toggle */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
-    header {visibility: hidden;}
     [data-testid="manage-app-button"] {display: none;}
     [data-testid="stToolbar"] {visibility: hidden;}
     [data-testid="stDecoration"] {display: none;}
-    button[kind="header"] {display: none;}
+    [data-testid="stStatusWidget"] {display: none;}
+
+    /* Hide "Made with Streamlit" text in footer */
+    .viewerBadge_container__r5tak {display: none;}
+    .viewerBadge_link__qRIco {display: none;}
+
+    /* Keep header visible but hide its inner branding elements */
+    header[data-testid="stHeader"] {background: transparent !important;}
+    [data-testid="stHeader"] > div:first-child {display: none;}
     </style>
     """, unsafe_allow_html=True)
 
