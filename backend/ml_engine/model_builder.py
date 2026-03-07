@@ -120,8 +120,10 @@ class ModelBuilder:
 
     def _check_overfitting(self, metrics, df, task_type):
         """
-        Detect suspicious perfect scores and add warning to metrics.
-        Perfect scores on tiny datasets = overfitting, not real performance.
+        Detect suspicious scores and add contextual warning to metrics.
+        - Perfect scores on small data = likely overfitting
+        - Very high scores on any size = possible data leakage
+        - Low scores = model needs more/better data
         """
         n = len(df)
         warning = None
@@ -129,23 +131,39 @@ class ModelBuilder:
         if task_type == "classification":
             acc = metrics.get("accuracy", 0)
             f1 = metrics.get("f1_score", 0)
-            if (acc >= 0.99 or f1 >= 0.99) and n < 200:
+            best = max(acc, f1)
+            if best >= 0.99 and n < 500:
                 warning = (
-                    f"⚠️ Perfect score on only {n} rows likely means overfitting — "
-                    "not a reliable result. Validate on a larger dataset."
+                    f"⚠️ Score of {best:.0%} on only {n} rows likely means overfitting — "
+                    "the model memorized training data. Validate on a larger, unseen dataset."
                 )
-            elif acc >= 0.99 or f1 >= 0.99:
+            elif best >= 0.99:
                 warning = (
-                    "⚠️ Perfect scores detected — verify your dataset has no "
-                    "data leakage (target column info in features)."
+                    f"⚠️ Perfect score detected — verify there is no data leakage "
+                    "(target column information accidentally present in features)."
+                )
+            elif best < 0.60:
+                warning = (
+                    f"⚠️ Low score of {best:.0%} — model is struggling. "
+                    "Try adding more rows, cleaning data, or improving your prompt."
                 )
 
         elif task_type == "regression":
             r2 = metrics.get("r2_score", 0)
-            if r2 >= 0.99 and n < 200:
+            if r2 >= 0.99 and n < 500:
                 warning = (
                     f"⚠️ R² of {r2:.2f} on only {n} rows likely means overfitting — "
-                    "not a reliable result. Validate on a larger dataset."
+                    "the model memorized training data. Validate on a larger dataset."
+                )
+            elif r2 >= 0.99:
+                warning = (
+                    f"⚠️ Perfect R² detected — verify there is no data leakage "
+                    "(target column information accidentally present in features)."
+                )
+            elif r2 < 0.40:
+                warning = (
+                    f"⚠️ Low R² of {r2:.2f} — model is struggling to find patterns. "
+                    "Try adding more rows or relevant features."
                 )
 
         if warning:

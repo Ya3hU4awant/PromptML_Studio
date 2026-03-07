@@ -85,8 +85,10 @@ class ReportGenerator:
     def _plotly_reg(self, metrics, predictions):
             charts = {}
             if 'prediction_label' in predictions.columns:
-                y_true = predictions.iloc[:,0].values; y_pred = predictions['prediction_label'].values
-                mn,mx = min(y_true.min(),y_pred.min()), max(y_true.max(),y_pred.max())
+                y_true = pd.to_numeric(predictions.iloc[:,0], errors='coerce').values
+                y_pred = pd.to_numeric(predictions['prediction_label'], errors='coerce').values
+                y_true = y_true[~np.isnan(y_true)]; y_pred = y_pred[~np.isnan(y_pred)]
+                mn,mx = float(min(y_true.min(),y_pred.min())), float(max(y_true.max(),y_pred.max()))
                 fig = go.Figure()
                 fig.add_trace(go.Scatter(x=y_true, y=y_pred, mode='markers',
                     marker=dict(size=8, color=y_pred, colorscale='Viridis', showscale=True)))
