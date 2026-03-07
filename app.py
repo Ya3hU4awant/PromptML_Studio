@@ -192,19 +192,62 @@ def load_css():
             st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
     st.markdown("""
     <style>
-    /* Hide Streamlit branding */
-    #MainMenu {visibility: hidden !important;}
-    footer {visibility: hidden !important;}
-    [data-testid="stDecoration"] {display: none !important;}
-    [data-testid="stStatusWidget"] {display: none !important;}
-    .viewerBadge_container__r5tak {display: none !important;}
-    .viewerBadge_link__qRIco {display: none !important;}
-    [data-testid="manage-app-button"] {display: none !important;}
-    ._profileContainer_51w34_53 {display: none !important;}
-    ._profilePreview_51w34_63 {display: none !important;}
+    /* ── Hide ALL Streamlit branding — desktop + mobile ── */
 
-    /* Hide only specific toolbar children - NOT the toolbar itself */
-    [data-testid="stToolbarActions"] {display: none !important;}
+    /* Main menu hamburger */
+    #MainMenu {visibility: hidden !important; display: none !important;}
+
+    /* Footer "Made with Streamlit" */
+    footer {visibility: hidden !important; display: none !important;}
+    footer *  {visibility: hidden !important; display: none !important;}
+
+    /* Top decoration bar */
+    [data-testid="stDecoration"]       {display: none !important;}
+
+    /* Status widget (running indicator) */
+    [data-testid="stStatusWidget"]     {display: none !important;}
+
+    /* Viewer badge (bottom-right Streamlit logo on mobile) */
+    .viewerBadge_container__r5tak      {display: none !important;}
+    .viewerBadge_link__qRIco           {display: none !important;}
+    .viewerBadge_text__1022            {display: none !important;}
+    [class*="viewerBadge"]             {display: none !important;}
+
+    /* Manage app / Deploy buttons */
+    [data-testid="manage-app-button"]  {display: none !important;}
+    [data-testid="stToolbarActions"]   {display: none !important;}
+
+    /* GitHub profile icon bottom-right (mobile + desktop) */
+    ._profileContainer_51w34_53        {display: none !important;}
+    ._profilePreview_51w34_63          {display: none !important;}
+    [class*="profileContainer"]        {display: none !important;}
+    [class*="profilePreview"]          {display: none !important;}
+    [data-testid="baseButton-header"][aria-label*="profile"] {display: none !important;}
+    [data-testid="baseButton-header"][aria-label*="GitHub"]  {display: none !important;}
+    [data-testid="baseButton-header"][title*="GitHub"]       {display: none !important;}
+
+    /* Streamlit cloud bottom-right watermark */
+    [data-testid="stAppViewBlockContainer"] ~ div > a        {display: none !important;}
+    a[href*="streamlit.io"]                                  {display: none !important;}
+    a[href*="share.streamlit"]                               {display: none !important;}
+
+    /* Any element with Streamlit logo SVG */
+    img[src*="streamlit"]                                    {display: none !important;}
+
+    /* Mobile: bottom bar that shows on phones */
+    [data-testid="stBottomBlockContainer"] [data-testid="stToolbar"] {display: none !important;}
+
+    /* "Created by" text + avatar bottom right */
+    [data-testid="stBottom"]                                         {display: none !important;}
+    [data-testid="stBottomBlockContainer"]                           {display: none !important;}
+    ._container_51w34_1                                              {display: none !important;}
+    ._container_gzau3_1                                              {display: none !important;}
+    [class*="_container_"][class*="_bottom"]                         {display: none !important;}
+    [class*="createdBy"]                                             {display: none !important;}
+    [class*="created_by"]                                            {display: none !important;}
+    /* Hide the entire fixed bottom-right corner block */
+    .stApp > div:last-child > div:last-child > div[style*="position: fixed"] {display: none !important;}
+    div[style*="position: fixed"][style*="bottom"]                   {display: none !important;}
     </style>
     """, unsafe_allow_html=True)
 
