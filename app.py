@@ -248,6 +248,23 @@ def load_css():
     /* Hide the entire fixed bottom-right corner block */
     .stApp > div:last-child > div:last-child > div[style*="position: fixed"] {display: none !important;}
     div[style*="position: fixed"][style*="bottom"]                   {display: none !important;}
+
+    /* GitHub avatar circle + red Streamlit share/crown button (mobile bottom-right) */
+    [data-testid="stActionButtonIcon"]                               {display: none !important;}
+    button[kind="shareButton"]                                       {display: none !important;}
+    button[data-testid="shareButton"]                                {display: none !important;}
+    [class*="shareButton"]                                           {display: none !important;}
+    [class*="ActionButton"]                                          {display: none !important;}
+
+    /* The entire fixed bottom-right floating bar on mobile */
+    section[data-testid="stSidebar"] ~ div > div[class*="fixed"]    {display: none !important;}
+    .stApp [class*="floatingToolbar"]                                {display: none !important;}
+    [class*="floatingToolbar"]                                       {display: none !important;}
+    [class*="toolbar"][style*="fixed"]                               {display: none !important;}
+
+    /* Nuclear option — hide any fixed-position bottom-right element */
+    div[style*="position: fixed"][style*="right"]                    {display: none !important;}
+    div[style*="position:fixed"][style*="right"]                     {display: none !important;}
     </style>
     """, unsafe_allow_html=True)
 
