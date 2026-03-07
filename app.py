@@ -177,7 +177,7 @@ st.set_page_config(
     page_title="PromptML Studio",
     page_icon="🤖",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="auto",
     menu_items={
         'Get Help': None,
         'Report a bug': None,
@@ -192,21 +192,19 @@ def load_css():
             st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
     st.markdown("""
     <style>
-    /* Hide Streamlit branding but keep sidebar toggle */
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    [data-testid="manage-app-button"] {display: none;}
-    [data-testid="stToolbar"] {visibility: hidden;}
-    [data-testid="stDecoration"] {display: none;}
-    [data-testid="stStatusWidget"] {display: none;}
+    /* Hide Streamlit branding */
+    #MainMenu {visibility: hidden !important;}
+    footer {visibility: hidden !important;}
+    [data-testid="stDecoration"] {display: none !important;}
+    [data-testid="stStatusWidget"] {display: none !important;}
+    .viewerBadge_container__r5tak {display: none !important;}
+    .viewerBadge_link__qRIco {display: none !important;}
+    [data-testid="manage-app-button"] {display: none !important;}
+    ._profileContainer_51w34_53 {display: none !important;}
+    ._profilePreview_51w34_63 {display: none !important;}
 
-    /* Hide "Made with Streamlit" text in footer */
-    .viewerBadge_container__r5tak {display: none;}
-    .viewerBadge_link__qRIco {display: none;}
-
-    /* Keep header visible but hide its inner branding elements */
-    header[data-testid="stHeader"] {background: transparent !important;}
-    [data-testid="stHeader"] > div:first-child {display: none;}
+    /* Hide only specific toolbar children - NOT the toolbar itself */
+    [data-testid="stToolbarActions"] {display: none !important;}
     </style>
     """, unsafe_allow_html=True)
 
