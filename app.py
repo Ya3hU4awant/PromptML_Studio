@@ -400,6 +400,8 @@ def show_results_no_code():
         with col3: st.metric("Recall", f"{metrics.get('recall', 0):.2%}")
         with col4: st.metric("F1 Score", f"{metrics.get('f1_score', 0):.2%}")
         st.info(f"🤖 Best Model: **{metrics.get('model_name', 'Unknown')}**")
+        if metrics.get("overfitting_warning"):
+            st.warning(metrics["overfitting_warning"])
         st.markdown("### 📈 Visualizations")
         if 'feature_importance' in charts:
             st.plotly_chart(charts['feature_importance'], use_container_width=True)
@@ -420,6 +422,8 @@ def show_results_no_code():
             rmse = metrics.get('rmse', 0)
             st.metric("MSE", f"{rmse**2:.2f}")
         st.info(f"🤖 Best Model: **{metrics.get('model_name', 'Unknown')}**")
+        if metrics.get("overfitting_warning"):
+            st.warning(metrics["overfitting_warning"])
         if result.get('comparison') is not None and not result['comparison'].empty:
             with st.expander("📊 View All Models Comparison", expanded=False):
                 st.dataframe(result['comparison'], use_container_width=True)
@@ -491,6 +495,8 @@ def show_results_developer():
     st.markdown("### 📊 Model Summary")
     metrics = result['metrics']
     st.info(f"🤖 Model: **{metrics.get('model_name', 'Unknown')}**")
+    if metrics.get("overfitting_warning"):
+        st.warning(metrics["overfitting_warning"])
     if result['task_type'] == 'classification':
         col1, col2, col3, col4 = st.columns(4)
         with col1: st.metric("Accuracy", f"{metrics.get('accuracy', 0):.2%}")
