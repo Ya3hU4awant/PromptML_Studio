@@ -173,13 +173,34 @@ def generate_web_app_zip(model_path, feature_columns, feature_types, app_dir="te
 # ─────────────────────────────────────────────────────────────
 # PAGE CONFIG & CSS
 # ─────────────────────────────────────────────────────────────
-st.set_page_config(page_title="PromptML Studio", layout="wide")
+st.set_page_config(
+    page_title="PromptML Studio",
+    page_icon="🤖",
+    layout="wide",
+    initial_sidebar_state="expanded",
+    menu_items={
+        'Get Help': None,
+        'Report a bug': None,
+        'About': "**PromptML Studio** — Democratizing AI/ML for everyone.\n\nBuilt by Ya3hU4awant"
+    }
+)
 
 def load_css():
     css_path = Path(__file__).parent / "static" / "style.css"
     if css_path.exists():
         with open(css_path, encoding='utf-8') as f:
             st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+    st.markdown("""
+    <style>
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+    [data-testid="manage-app-button"] {display: none;}
+    [data-testid="stToolbar"] {visibility: hidden;}
+    [data-testid="stDecoration"] {display: none;}
+    button[kind="header"] {display: none;}
+    </style>
+    """, unsafe_allow_html=True)
 
 load_css()
 
@@ -782,13 +803,13 @@ Be friendly, use simple analogies, bullet points, and always end with 1 actionab
                 bot_reply = f"⚠️ Groq API error: {e}"
             st.session_state.chat_history.append({"role": "assistant", "content": bot_reply})
             st.rerun()
-
         st.markdown("---")
         for msg in reversed(st.session_state.chat_history):
             if msg["role"] == "user":
                 st.markdown(f"<div style='background:#1e1e2e;padding:8px 12px;border-radius:8px;margin-bottom:6px;border-left:3px solid #6c63ff'>🧑 <b>You:</b> {msg['content']}</div>", unsafe_allow_html=True)
             else:
-                st.markdown(f"<div style='background:#0f2a1a;padding:8px 12px;border-radius:8px;margin-bottom:10px;border-left:3px solid #2ecc71'>🤖 <b>Assistant:</b><br>{msg['content']}</div>", unsafe_allow_html=True)
+                content = msg['content'].replace(">>", "&rsaquo;&rsaquo;&rsaquo;")
+                st.markdown(f"<div style='background:#0f2a1a;padding:8px 12px;border-radius:8px;margin-bottom:10px;border-left:3px solid #2ecc71'>🤖 <b>Assistant:</b><br>{content}</div>", unsafe_allow_html=True)
 
         st.markdown("---")
         if st.session_state.mode:
