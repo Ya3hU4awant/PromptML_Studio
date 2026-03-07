@@ -401,9 +401,9 @@ class ModelBuilder:
             metrics["model_name"] = comparison_df.index[0]
         return metrics
 
-    # ============================================================
+    # ==============================================================
     # FEATURE IMPORTANCE
-    # ============================================================
+    # =============================================================
 
     def _get_feature_importance(self, model, df, target_column):
         try:
