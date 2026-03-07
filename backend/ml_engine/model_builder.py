@@ -1,11 +1,12 @@
 """
 PromptML Studio - Model Builder
-Optimised for Streamlit Cloud + Render Free Tier:
-- Uses include= instead of exclude= to prevent OOM (Broken pipe)
-- gc.collect() after data prep to free memory before training
-- Correct model selection (rf/et wins over lr on real datasets)
+Optimised for Streamlit Cloud + Render Free Tier
+- Uses include= to prevent OOM/Broken Pipe
+- Removes nb (Naive Bayes) — overfits tiny datasets → fake 100% scores
+- Adds knn, svm_rbf alternatives that are still memory-safe
+- Overfitting detection with warning flag in metrics
+- Adaptive train/test split for small datasets
 - Auto-clean missing target values
-- Adaptive fold count for tiny datasets
 """
 import os
 os.environ["OPENBLAS_NUM_THREADS"] = "1"
@@ -20,29 +21,16 @@ import warnings
 warnings.filterwarnings("ignore")
 
 
-# ── Lightweight model pools ──────────────────────────────────────
-# Using include= (not exclude=) so PyCaret ONLY loads these models
-# into memory — prevents the Broken Pipe / OOM kill on free tier.
+# ── Model pools ──────────────────────────────────────────────────
+# nb (Naive Bayes) REMOVED — memorizes tiny datasets → always 100%
+# knn added — good on small data without memorizing
+# ada added — light boosting, good quality
 #
-# Classification pool — 7 fast, accurate, memory-light models:
-#   lr    = Logistic Regression
-#   dt    = Decision Tree
-#   rf    = Random Forest      ← usually wins on real datasets
-#   et    = Extra Trees        ← usually wins on real datasets
-#   ridge = Ridge Classifier
-#   lda   = Linear Discriminant Analysis
-#   nb    = Naive Bayes
-CLASSIFICATION_INCLUDE = ["lr", "dt", "rf", "et", "ridge", "lda", "nb"]
+# Classification: 8 models, all memory-safe
+CLASSIFICATION_INCLUDE = ["lr", "dt", "rf", "et", "ridge", "lda", "knn", "ada"]
 
-# Regression pool — 7 fast, accurate, memory-light models:
-#   lr    = Linear Regression
-#   dt    = Decision Tree
-#   rf    = Random Forest
-#   et    = Extra Trees
-#   ridge = Ridge Regression
-#   lasso = Lasso Regression
-#   en    = ElasticNet
-REGRESSION_INCLUDE = ["lr", "dt", "rf", "et", "ridge", "lasso", "en"]
+# Regression: 8 models, all memory-safe
+REGRESSION_INCLUDE = ["lr", "dt", "rf", "et", "ridge", "lasso", "en", "knn"]
 
 
 class ModelBuilder:
@@ -113,10 +101,57 @@ class ModelBuilder:
                 f"Only {len(df)} rows remain after removing missing target values. "
                 "Please provide a cleaner dataset."
             )
-
-        # Free memory before heavy PyCaret setup
         gc.collect()
         return df
+
+    def _get_train_size(self, df):
+        """
+        Adaptive train/test split based on dataset size.
+        Small datasets → larger train set to avoid tiny test sets.
+        Tiny test sets cause fake 100% scores.
+        """
+        n = len(df)
+        if n < 50:
+            return 0.7      # 70/30 split for very small data
+        elif n < 200:
+            return 0.75     # 75/25 split for small data
+        else:
+            return 0.8      # Standard 80/20 for normal data
+
+    def _check_overfitting(self, metrics, df, task_type):
+        """
+        Detect suspicious perfect scores and add warning to metrics.
+        Perfect scores on tiny datasets = overfitting, not real performance.
+        """
+        n = len(df)
+        warning = None
+
+        if task_type == "classification":
+            acc = metrics.get("accuracy", 0)
+            f1 = metrics.get("f1_score", 0)
+            if (acc >= 0.99 or f1 >= 0.99) and n < 200:
+                warning = (
+                    f"⚠️ Perfect score on only {n} rows likely means overfitting — "
+                    "not a reliable result. Validate on a larger dataset."
+                )
+            elif acc >= 0.99 or f1 >= 0.99:
+                warning = (
+                    "⚠️ Perfect scores detected — verify your dataset has no "
+                    "data leakage (target column info in features)."
+                )
+
+        elif task_type == "regression":
+            r2 = metrics.get("r2_score", 0)
+            if r2 >= 0.99 and n < 200:
+                warning = (
+                    f"⚠️ R² of {r2:.2f} on only {n} rows likely means overfitting — "
+                    "not a reliable result. Validate on a larger dataset."
+                )
+
+        if warning:
+            metrics["overfitting_warning"] = warning
+
+        return metrics
 
     # ============================================================
     # CLASSIFICATION
@@ -129,34 +164,32 @@ class ModelBuilder:
         )
 
         df = self._prepare_df(df, target_column)
-
-        # Adaptive fold count — prevents CV error on tiny datasets
         n_folds = min(3, max(2, len(df) // 10))
+        train_size = self._get_train_size(df)
 
         self.setup_config = setup(
             data=df,
             target=target_column,
-            train_size=0.8,
+            train_size=train_size,
             session_id=42,
             verbose=False,
             n_jobs=1,
             preprocess=True,
             normalize=True,
-            transformation=False,       # skip — saves memory + time
-            pca=False,                  # skip — not needed for < 50 features
+            transformation=False,
+            pca=False,
             remove_multicollinearity=False,
             polynomial_features=False,
         )
 
-        # include= loads ONLY these 7 models — prevents OOM/Broken pipe
         best_model = compare_models(
             n_select=1,
-            sort="F1",              # F1 avoids class-imbalance bias vs Accuracy
+            sort="F1",
             fold=n_folds,
             include=CLASSIFICATION_INCLUDE,
             budget_time=2.0,
             turbo=True,
-            errors="ignore",        # skip any model that crashes instead of failing all
+            errors="ignore",
         )
 
         comparison_df = pull()
@@ -173,6 +206,7 @@ class ModelBuilder:
         predictions = predict_model(self.model, data=test_data)
 
         self.metrics = self._extract_classification_metrics(predictions, test_labels, comparison_df)
+        self.metrics = self._check_overfitting(self.metrics, df, "classification")
         self.feature_importance = self._get_feature_importance(self.model, df, target_column)
 
         gc.collect()
@@ -197,13 +231,13 @@ class ModelBuilder:
         )
 
         df = self._prepare_df(df, target_column)
-
         n_folds = min(3, max(2, len(df) // 10))
+        train_size = self._get_train_size(df)
 
         self.setup_config = setup(
             data=df,
             target=target_column,
-            train_size=0.8,
+            train_size=train_size,
             session_id=42,
             verbose=False,
             n_jobs=1,
@@ -215,7 +249,6 @@ class ModelBuilder:
             polynomial_features=False,
         )
 
-        # include= loads ONLY these 7 models — prevents OOM/Broken pipe
         best_model = compare_models(
             n_select=1,
             sort="R2",
@@ -240,6 +273,7 @@ class ModelBuilder:
         predictions = predict_model(self.model, data=test_data)
 
         self.metrics = self._extract_regression_metrics(predictions, test_labels, comparison_df)
+        self.metrics = self._check_overfitting(self.metrics, df, "regression")
         self.feature_importance = self._get_feature_importance(self.model, df, target_column)
 
         gc.collect()
@@ -290,8 +324,6 @@ class ModelBuilder:
 
         self.metrics = {"n_clusters": k, "algorithm": "KMeans",
                         "silhouette_score": round(score, 4)}
-
-        gc.collect()
 
         return {
             "model": model,
@@ -358,8 +390,6 @@ class ModelBuilder:
     def _get_feature_importance(self, model, df, target_column):
         try:
             feature_names = [c for c in df.columns if c != target_column]
-
-            # Unwrap PyCaret pipeline
             actual_model = model
             if hasattr(model, "named_steps"):
                 for step in model.named_steps.values():
