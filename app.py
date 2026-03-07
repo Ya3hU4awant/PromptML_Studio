@@ -248,7 +248,7 @@ def show_mode_selector():
     st.markdown("### 🎯 Choose Your Mode")
     col1, col2 = st.columns(2)
     with col1:
-        if st.button("📱 No-Code Mode", use_container_width=True, type="primary"):
+        if st.button("📱 No-Code Mode", width='stretch', type="primary"):
             st.session_state.mode = "no-code"
             st.rerun()
         st.markdown("""
@@ -262,7 +262,7 @@ def show_mode_selector():
         </div>
         """, unsafe_allow_html=True)
     with col2:
-        if st.button("💻 Developer Mode", use_container_width=True, type="secondary"):
+        if st.button("💻 Developer Mode", width='stretch', type="secondary"):
             st.session_state.mode = "developer"
             st.rerun()
         st.markdown("""
@@ -282,7 +282,7 @@ def upload_data_section():
     uploaded_file = st.file_uploader("Drag and drop your CSV file here", type=['csv'])
     col1, col2 = st.columns(2)
     with col1:
-        if st.button("📝 Use House Prices Sample", use_container_width=True):
+        if st.button("📝 Use House Prices Sample", width='stretch'):
             sample_path = Path(__file__).parent / "static" / "sample_data" / "house_prices.csv"
             if sample_path.exists():
                 st.session_state.uploaded_data = pd.read_csv(sample_path)
@@ -290,7 +290,7 @@ def upload_data_section():
                 st.success("✅ House prices sample data loaded!")
                 st.rerun()
     with col2:
-        if st.button("📝 Use Customer Churn Sample", use_container_width=True):
+        if st.button("📝 Use Customer Churn Sample", width='stretch'):
             sample_path = Path(__file__).parent / "static" / "sample_data" / "customer_churn.csv"
             if sample_path.exists():
                 st.session_state.uploaded_data = pd.read_csv(sample_path)
@@ -303,7 +303,7 @@ def upload_data_section():
             st.session_state.uploaded_data = df
             st.success(f"✅ File uploaded! {len(df)} rows, {len(df.columns)} columns")
             with st.expander("📋 Data Preview", expanded=True):
-                st.dataframe(df.head(10), use_container_width=True)
+                st.dataframe(df.head(10), width='stretch')
                 col1, col2, col3, col4 = st.columns(4)
                 with col1: st.metric("Total Rows", len(df))
                 with col2: st.metric("Total Columns", len(df.columns))
@@ -315,7 +315,7 @@ def upload_data_section():
         df = st.session_state.uploaded_data
         st.success(f"✅ Data loaded! {len(df)} rows, {len(df.columns)} columns")
         with st.expander("📋 Data Preview", expanded=False):
-            st.dataframe(df.head(10), use_container_width=True)
+            st.dataframe(df.head(10), width='stretch')
     return st.session_state.uploaded_data
 
 
@@ -332,7 +332,7 @@ def prompt_input_section():
 
 
 def train_model_section(df, prompt):
-    if st.button("🚀 Build ML Model", type="primary", use_container_width=True):
+    if st.button("🚀 Build ML Model", type="primary", width='stretch'):
         with st.spinner("🤖 AI is analyzing your data and building models..."):
             try:
                 progress_bar = st.progress(0)
@@ -404,14 +404,14 @@ def show_results_no_code():
             st.warning(metrics["overfitting_warning"])
         st.markdown("### 📈 Visualizations")
         if 'feature_importance' in charts:
-            st.plotly_chart(charts['feature_importance'], use_container_width=True)
+            st.plotly_chart(charts['feature_importance'], width='stretch')
         col1, col2 = st.columns(2)
         with col1:
             if 'confusion_matrix' in charts:
-                st.plotly_chart(charts['confusion_matrix'], use_container_width=True)
+                st.plotly_chart(charts['confusion_matrix'], width='stretch')
         with col2:
             if 'metrics_comparison' in charts:
-                st.plotly_chart(charts['metrics_comparison'], use_container_width=True)
+                st.plotly_chart(charts['metrics_comparison'], width='stretch')
     elif task_type == 'regression':
         st.markdown("### 🎯 Performance Metrics")
         col1, col2, col3, col4 = st.columns(4)
@@ -426,26 +426,26 @@ def show_results_no_code():
             st.warning(metrics["overfitting_warning"])
         if result.get('comparison') is not None and not result['comparison'].empty:
             with st.expander("📊 View All Models Comparison", expanded=False):
-                st.dataframe(result['comparison'], use_container_width=True)
+                st.dataframe(result['comparison'], width='stretch')
         st.markdown("### 📈 Visualizations")
         col1, col2 = st.columns(2)
         with col1:
             if 'actual_vs_predicted' in charts:
-                st.plotly_chart(charts['actual_vs_predicted'], use_container_width=True)
+                st.plotly_chart(charts['actual_vs_predicted'], width='stretch')
         with col2:
             if 'residuals' in charts:
-                st.plotly_chart(charts['residuals'], use_container_width=True)
+                st.plotly_chart(charts['residuals'], width='stretch')
     elif task_type == 'clustering':
         st.markdown("### 🔵 Clustering Results")
         col1, col2 = st.columns(2)
         with col1: st.metric("Number of Clusters", metrics.get("n_clusters", 0))
         with col2: st.metric("Algorithm", metrics.get("algorithm", "KMeans"))
         if 'predictions' in result:
-            st.dataframe(result['predictions'].head(), use_container_width=True)
+            st.dataframe(result['predictions'].head(), width='stretch')
         if "viz_data" in result:
             import plotly.express as px
             fig = px.scatter(result["viz_data"], x="pca_1", y="pca_2", color="cluster", title="Cluster Visualization (PCA)")
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
     st.markdown("### 📥 Download Results")
     col1, col2 = st.columns(2)
     with col1:
@@ -454,11 +454,11 @@ def show_results_no_code():
             st.download_button(
                 label="📊 Download Predictions CSV", data=predictions_csv,
                 file_name=f"predictions_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
-                mime="text/csv", use_container_width=True
+                mime="text/csv", width='stretch'
             )
     with col2:
         if task_type in ['classification', 'regression'] and 'report_generator' in result:
-            if st.button("📄 Generate PDF Report", use_container_width=True, key="nocode_pdf_btn"):
+            if st.button("📄 Generate PDF Report", width='stretch', key="nocode_pdf_btn"):
                 with st.spinner("Generating PDF report..."):
                     try:
                         with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_file:
@@ -479,7 +479,7 @@ def show_results_no_code():
                         st.download_button(
                             label="⬇️ Download PDF Report", data=pdf_data,
                             file_name=f"promptml_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
-                            mime="application/pdf", use_container_width=True
+                            mime="application/pdf", width='stretch'
                         )
                         os.unlink(pdf_path)
                     except Exception as e:
@@ -513,28 +513,28 @@ def show_results_developer():
             st.metric("MSE", f"{rmse**2:.2f}")
     if result.get('comparison') is not None and not result['comparison'].empty:
         with st.expander("📊 View All Models Comparison", expanded=False):
-            st.dataframe(result['comparison'], use_container_width=True)
+            st.dataframe(result['comparison'], width='stretch')
     charts = result.get("charts", {})
     if charts:
         st.markdown("### 📈 Visualizations")
         if result['task_type'] == 'classification':
             if 'feature_importance' in charts:
-                st.plotly_chart(charts['feature_importance'], use_container_width=True)
+                st.plotly_chart(charts['feature_importance'], width='stretch')
             col1, col2 = st.columns(2)
             with col1:
                 if 'confusion_matrix' in charts:
-                    st.plotly_chart(charts['confusion_matrix'], use_container_width=True)
+                    st.plotly_chart(charts['confusion_matrix'], width='stretch')
             with col2:
                 if 'metrics_comparison' in charts:
-                    st.plotly_chart(charts['metrics_comparison'], use_container_width=True)
+                    st.plotly_chart(charts['metrics_comparison'], width='stretch')
         elif result['task_type'] == 'regression':
             col1, col2 = st.columns(2)
             with col1:
                 if 'actual_vs_predicted' in charts:
-                    st.plotly_chart(charts['actual_vs_predicted'], use_container_width=True)
+                    st.plotly_chart(charts['actual_vs_predicted'], width='stretch')
             with col2:
                 if 'residuals' in charts:
-                    st.plotly_chart(charts['residuals'], use_container_width=True)
+                    st.plotly_chart(charts['residuals'], width='stretch')
     st.markdown("### 📥 Download Results")
     col1, col2, col3 = st.columns(3)
     with col1:
@@ -543,11 +543,11 @@ def show_results_developer():
                 label="📊 Download Predictions CSV",
                 data=result['predictions'].to_csv(index=False),
                 file_name=f"predictions_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
-                mime="text/csv", use_container_width=True
+                mime="text/csv", width='stretch'
             )
     with col2:
         if result['task_type'] in ['classification', 'regression'] and 'report_generator' in result:
-            if st.button("📄 Generate PDF Report", use_container_width=True, key="dev_pdf_btn"):
+            if st.button("📄 Generate PDF Report", width='stretch', key="dev_pdf_btn"):
                 with st.spinner("Generating PDF..."):
                     try:
                         with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_file:
@@ -568,13 +568,13 @@ def show_results_developer():
                         st.download_button(
                             label="⬇️ Download PDF Report", data=pdf_data,
                             file_name=f"promptml_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
-                            mime="application/pdf", use_container_width=True
+                            mime="application/pdf", width='stretch'
                         )
                         os.unlink(pdf_path)
                     except Exception as e:
                         st.error(f"Error: {str(e)}")
     with col3:
-        if st.button("🔨 Generate Python Package", use_container_width=True, key="dev_pkg_btn"):
+        if st.button("🔨 Generate Python Package", width='stretch', key="dev_pkg_btn"):
             with st.spinner("Creating package..."):
                 try:
                     feature_columns = st.session_state.uploaded_data.drop(columns=[result['target_column']]).columns.tolist()
@@ -595,7 +595,7 @@ def show_results_developer():
                     st.download_button(
                         label="⬇️ Download Package (ZIP)", data=zip_buffer.getvalue(),
                         file_name=f"promptml_package_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip",
-                        mime="application/zip", use_container_width=True
+                        mime="application/zip", width='stretch'
                     )
                     st.success("✅ Package ready!")
                 except Exception as e:
@@ -742,7 +742,7 @@ Be friendly, use simple analogies, bullet points, and always end with 1 actionab
         # Prompt Refiner
         st.markdown("**✨ Prompt Refiner**")
         user_raw_prompt = st.text_input("Paste your prompt to refine:", placeholder="e.g. predict sales...", key="prompt_refiner_input")
-        if st.button("✨ Refine My Prompt", use_container_width=True, key="refine_btn"):
+        if st.button("✨ Refine My Prompt", width='stretch', key="refine_btn"):
             if user_raw_prompt.strip():
                 refine_q = f"Refine this ML prompt for PromptML Studio. Give 2-3 improved versions: '{user_raw_prompt}'"
                 st.session_state.chat_history.append({"role": "user", "content": refine_q})
@@ -776,7 +776,7 @@ Be friendly, use simple analogies, bullet points, and always end with 1 actionab
         }
         selected_faq = st.selectbox("💡 FAQs & Quick Questions", options=list(faq_options.keys()), key="faq_select")
         if selected_faq != "— Select a question —":
-            if st.button("Ask this ➤", use_container_width=True, key="faq_btn"):
+            if st.button("Ask this ➤", width='stretch', key="faq_btn"):
                 question = faq_options[selected_faq]
                 st.session_state.chat_history.append({"role": "user", "content": question})
                 try:
@@ -795,8 +795,8 @@ Be friendly, use simple analogies, bullet points, and always end with 1 actionab
 
         user_input = st.text_input("Ask me anything...", placeholder="e.g. What is Random Forest?", key="chat_input")
         send_col, clear_col = st.columns([2, 1])
-        send_clicked  = send_col.button("Send ➤", use_container_width=True, type="primary")
-        clear_clicked = clear_col.button("🗑️ Clear", use_container_width=True)
+        send_clicked  = send_col.button("Send ➤", width='stretch', type="primary")
+        clear_clicked = clear_col.button("🗑️ Clear", width='stretch')
         if clear_clicked:
             st.session_state.chat_history = []
             st.rerun()
@@ -870,7 +870,7 @@ Be friendly, use simple analogies, bullet points, and always end with 1 actionab
                 if st.session_state.get("model_trained"):
                     st.markdown("---")
                     st.subheader("🌍 Deploy as Website")
-                    if st.button("🚀 Build Website", type="primary", use_container_width=True):
+                    if st.button("🚀 Build Website", type="primary", width='stretch'):
                         with st.spinner("Generating website..."):
                             zip_path = generate_website()
                             st.session_state["website_zip_path"] = zip_path
@@ -883,9 +883,9 @@ Be friendly, use simple analogies, bullet points, and always end with 1 actionab
                         btn_col1, btn_col2 = st.columns(2)
                         with btn_col1:
                             with open(st.session_state["website_zip_path"], "rb") as f:
-                                st.download_button("⬇️ Download Website ZIP", f, file_name="promptml_website.zip", mime="application/zip", use_container_width=True)
+                                st.download_button("⬇️ Download Website ZIP", f, file_name="promptml_website.zip", mime="application/zip", width='stretch')
                         with btn_col2:
-                            if st.button("👁️ Preview Website", use_container_width=True):
+                            if st.button("👁️ Preview Website", width='stretch'):
                                 st.session_state["show_preview"] = not st.session_state.get("show_preview", False)
                         if st.session_state.get("show_preview") and st.session_state.get("preview_html"):
                             st.markdown("#### 🖥️ Website Preview")
