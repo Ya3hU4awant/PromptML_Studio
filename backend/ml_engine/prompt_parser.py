@@ -124,23 +124,65 @@ class PromptParser:
 
     def parse_prompt(self, prompt: str, df):
         task_type, confidence = self.detect_task_type(prompt)
+        prompt_lower = prompt.lower()
+
+        # Count explicit classification vs regression keyword hits
+        class_hits = sum(1 for kw in self.classification_keywords if kw in prompt_lower)
+        reg_hits   = sum(1 for kw in self.regression_keywords   if kw in prompt_lower)
+
+        # User explicitly said "classify/class/detect" etc — trust the prompt
+        # Only use data override when prompt is ambiguous (equal or zero scores)
+        prompt_is_explicit = class_hits != reg_hits
 
         if task_type in ["classification", "regression"]:
             target_column = self.detect_target_column(prompt, df)
         else:
             target_column = None
 
-        # Smart override using dataset
-        task_type, data_conf = self.override_with_data_logic(
-            task_type,
-            target_column,
-            df
-        )
-
-        final_confidence = max(confidence, data_conf)
+        if prompt_is_explicit:
+            # Prompt wins — just validate target column with data
+            data_task, data_conf = self.override_with_data_logic(
+                task_type, target_column, df
+            )
+            # If data strongly disagrees AND target column was auto-detected
+            # (no column name in prompt), pick the best target for the task
+            if data_task != task_type:
+                target_column = self._best_target_for_task(task_type, df)
+            final_confidence = confidence
+        else:
+            # Ambiguous prompt — let data decide
+            task_type, data_conf = self.override_with_data_logic(
+                task_type, target_column, df
+            )
+            final_confidence = max(confidence, data_conf)
 
         return {
             "task_type": task_type,
             "target_column": target_column,
             "confidence": round(final_confidence, 2)
         }
+
+    # --------------------------------------------------
+    # BEST TARGET COLUMN FOR TASK TYPE
+    # --------------------------------------------------
+
+    def _best_target_for_task(self, task_type, df):
+        """
+        When prompt specifies task but target is ambiguous,
+        pick the most suitable column from the dataset.
+        Classification → last column with few unique values
+        Regression     → last numeric column with many unique values
+        """
+        if task_type == "classification":
+            # Prefer columns with 2-20 unique values (class labels)
+            for col in reversed(df.columns):
+                u = df[col].nunique()
+                if 2 <= u <= 20:
+                    return col
+        elif task_type == "regression":
+            # Prefer numeric columns with many unique values
+            for col in reversed(df.columns):
+                if df[col].dtype in ["int64", "float64"] and df[col].nunique() > 20:
+                    return col
+        # Fallback to last column
+        return df.columns[-1]
