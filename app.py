@@ -784,11 +784,6 @@ STYLE:
                 st.session_state.model_result = None
                 st.rerun()
         st.markdown("---")
-        st.markdown("### 📚 About")
-        st.markdown("**PromptML Studio** is an AI-powered AutoML platform that democratizes machine learning.\n\nSimply upload your data, describe your goal, and get production-ready ML models!")
-        st.markdown("---")
-        st.markdown("### 🎓 AIML Diploma Project")
-        st.markdown("Made with ❤️ for democratizing AI/ML")
 
     # Main content
     if st.session_state.mode is None:
