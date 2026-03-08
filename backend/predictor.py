@@ -68,7 +68,27 @@ class Predictor:
             df = data.copy()
         else:
             raise ValueError("Data must be DataFrame, dict, or list")
-        
+
+        # ================= IRIS DATA FIX =================
+
+        # Drop target column if present
+        if 'Species' in df.columns:
+            df = df.drop(columns=['Species'])
+
+        # Ensure correct feature order (as used in training)
+        expected_cols = [
+            'Id',
+            'SepalLengthCm',
+            'SepalWidthCm',
+            'PetalLengthCm',
+            'PetalWidthCm'
+        ]
+
+        # Keep only required columns in correct order
+        df = df[expected_cols]
+
+        # =================================================
+
         # Make predictions using PyCaret
         try:
             # Try PyCaret prediction first
@@ -166,3 +186,44 @@ class Predictor:
         return predictions
 
 
+def predict_from_model(
+    model_path: str,
+    data: Union[pd.DataFrame, dict, str]
+) -> pd.DataFrame:
+    """
+    Convenience function to make predictions
+    
+    Args:
+        model_path: Path to saved model
+        data: Input data (DataFrame, dict, or CSV path)
+        
+    Returns:
+        DataFrame with predictions
+        
+    Example:
+        >>> predictions = predict_from_model('model.pkl', 'new_data.csv')
+    """
+    predictor = Predictor(model_path)
+    
+    if isinstance(data, str) and data.endswith('.csv'):
+        return predictor.batch_predict(data)
+    else:
+        return predictor.predict(data)
+
+
+if __name__ == "__main__":
+    # Test predictor
+    print("🧪 Testing Predictor\n")
+    
+    # Create sample data
+    sample_data = {
+        'feature_0': 1.5,
+        'feature_1': 2.3,
+        'feature_2': -0.5,
+        'feature_3': 0.8,
+        'feature_4': 1.2
+    }
+    
+    print("Sample prediction test:")
+    print(f"Input: {sample_data}")
+    print("\n⚠️  Note: Actual prediction requires a trained model file")
