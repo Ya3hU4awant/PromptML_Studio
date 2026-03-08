@@ -82,22 +82,23 @@ class ModelBuilder:
         
         # Compare models
         print("🤖 Comparing multiple ML models...")
-        best_model = compare_models(
-            n_select=1,
+        top_models = compare_models(
+            n_select=3,
             sort='Accuracy'
         )
          
+        best_model = top_models[0]
          #keep comparison results here
         comparison_df = pull()
          
          #Tune model
-        from pycaret.classification import tune_models, stack_models
+        from pycaret.classification import tune_model, stack_models
         print("🔧 Tuning best model...")
         best_model = tune_model(best_model, optimize='Accuracy')
         
         #blend model (ensemble boost)
         print(" Stacking model...")
-        best_model = stack_models([best_model])
+        best_model = stack_models(top_models)
 
         # Finalize model (train on full dataset)
         print("✅ Finalizing best model...")
@@ -163,11 +164,11 @@ class ModelBuilder:
         
         # Compare models
         print("🤖 Comparing multiple ML models...")
-        best_model = compare_models(
+        top_models = compare_models(
             n_select=3,
             sort='R2'
         )
-        
+        best_model = top_models[0]
         # Get comparison results
         comparison_df = pull()
 
@@ -175,11 +176,11 @@ class ModelBuilder:
         from pycaret.regression import tune_model, stack_models
 
         print("Tuning best model...")
-        tuned_model = tune_model(top_models[0], optimize='R2')
+        best_model = tune_model(best_model, optimize='R2')
 
         
         print(" Stacking model...")
-        best_model = stack_models(estimator_list=top_models)
+        best_model = stack_models(top_models)
         
         # Finalize model
         print("✅ Finalizing best model...")

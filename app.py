@@ -6,6 +6,7 @@ AI-Powered AutoML Platform with Dual-Mode Interface
 import streamlit as st
 import pandas as pd
 import numpy as np
+import json
 import plotly.graph_objects as go
 from pathlib import Path
 import sys
@@ -19,6 +20,25 @@ warnings.filterwarnings('ignore')
 
 # Add backend to path
 sys.path.append(str(Path(__file__).parent))
+
+
+HISTORY_FILE = os.path.join(os.getcwd(), "history.json")
+
+
+def load_history():
+    try:
+        with open(HISTORY_FILE, "r") as f:
+            return json.load(f)
+    except:
+        return []
+
+def save_history(entry):
+    history = load_history()
+    history.append(entry)
+
+    with open(HISTORY_FILE, "w") as f:
+        json.dump(history, f, indent=4)
+
 
 from backend.ml_engine.prompt_parser import PromptParser
 from backend.ml_engine.model_builder import ModelBuilder
@@ -117,9 +137,9 @@ def upload_data_section():
     
     # File uploader
     uploaded_file = st.file_uploader(
-        "Drag and drop your CSV file here",
-        type=['csv'],
-        help="Upload a CSV file with your dataset"
+        "Drag and drop your CSV, EXCEL, TXT file here",
+        type=['csv','xlsx','t'],
+        help="Upload CSV, Excel or TXT file with your dataset"
     )
     
     # Sample data option
@@ -144,7 +164,23 @@ def upload_data_section():
     
     if uploaded_file is not None:
         try:
-            df = pd.read_csv(uploaded_file)
+            file_extension = uploaded_file.name.split('.')[-1].lower()
+
+            if file_extension == 'csv':
+                df = pd.read_csv(uploaded_file)
+
+            elif file_extension == 'xlsx':
+                df = pd.read_excel(uploaded_file)
+
+            elif file_extension == 'txt':
+                try:
+                    df = pd.read_csv(uploaded_file)
+                except:
+                    df = pd.read_csv(uploaded_file, delimiter='\t')
+
+            else:
+                st.error("Unsupported file format.")
+                return None
             st.session_state.uploaded_data = df
             st.success(f"✅ File uploaded successfully! {len(df)} rows, {len(df.columns)} columns")
             
@@ -196,6 +232,7 @@ def prompt_input_section():
 def train_model_section(df, prompt):
     """Model training section"""
     if st.button("🚀 Build ML Model", type="primary", use_container_width=True):
+
         with st.spinner("🤖 AI is analyzing your data and building models..."):
             try:
                 # Progress tracking
@@ -258,6 +295,17 @@ def train_model_section(df, prompt):
                 
                 st.success("🎉 Model trained successfully!")
                 st.balloons()
+
+                history_entry = {
+                    "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    "task_type": task_info['task_type'],
+                    "target_column": task_info['target_column'],
+                    "model_name": result['metrics'].get("model_name", "Unknown"),
+                    "metrics": result['metrics'],
+                    "comparison": result['comparison'].to_dict(),
+                }
+
+                save_history(history_entry)
                 
             except Exception as e:
                 st.error(f"❌ Error during model training: {str(e)}")
@@ -629,7 +677,38 @@ def main():
         st.markdown("---")
         st.markdown("### 🎓 AIML Diploma Project")
         st.markdown("Made with ❤️ for democratizing AI/ML")
-    
+        
+        
+        st.markdown("---")
+        st.markdown("### 📜 Model History")
+
+        history = load_history()
+
+        if history:
+
+            for i, item in enumerate(reversed(history[-10:])):
+
+                button_label = f"{item['model_name']} | {item['target_column']} | {item['timestamp'][:16]}"
+
+                if st.button(button_label, key=f"history_{i}"):
+
+                    st.session_state.model_result = {
+                        "metrics": item["metrics"],
+                        "comparison": pd.DataFrame(item["comparison"]),
+                        "task_type": item["task_type"],
+                        "target_column": item["target_column"],
+                        "charts": {},
+                        "feature_importance": pd.DataFrame(),
+                        "Predictions": pd.DataFrame()
+                    }
+
+                    st.session_state.model_trained = True
+                    st.session_state.mode = "no-code"
+                    st.rerun()
+
+        else:
+            st.info("No history yet.")
+
     # Main content
     if st.session_state.mode is None:
         show_hero_section()
@@ -655,6 +734,7 @@ def main():
                     show_results_no_code()
                 else:
                     show_results_developer()
+
 
 
 if __name__ == "__main__":
