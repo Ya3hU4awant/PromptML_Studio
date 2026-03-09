@@ -250,7 +250,30 @@ def login_ui():
         color: rgba(102,126,234,0.7);
         text-decoration: none;
     }
+
+    /* ── Tab-key field navigation ── */
     </style>
+    <script>
+    (function() {
+        function enableTabNav() {
+            var inputs = Array.from(document.querySelectorAll(
+                '.stTextInput input, .stButton button[kind="primary"], .stButton button'
+            )).filter(el => el.offsetParent !== null);
+            inputs.forEach(function(el, i) {
+                el.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter' || e.key === 'Tab') {
+                        e.preventDefault();
+                        var next = inputs[i + 1];
+                        if (next) { next.focus(); }
+                    }
+                });
+            });
+        }
+        // Run after Streamlit renders
+        setTimeout(enableTabNav, 800);
+        setTimeout(enableTabNav, 1500);
+    })();
+    </script>
     <div class="auth-bg"></div>
     """, unsafe_allow_html=True)
 
@@ -274,24 +297,45 @@ def login_ui():
         tab_login_style  = "active" if st.session_state.auth_tab == "login"  else ""
         tab_signup_style = "active" if st.session_state.auth_tab == "signup" else ""
 
-        st.markdown(f"""
-        <div class="auth-tabs">
-            <div class="auth-tab {tab_login_style}"  id="tab-login">🔑 Sign In</div>
-            <div class="auth-tab {tab_signup_style}" id="tab-signup">✨ Create Account</div>
-        </div>
-        """, unsafe_allow_html=True)
+        # ── Tab bar via columns — no duplicate ──────────────────
+        tc1, tc2 = st.columns(2)
+        with tc1:
+            login_style = "background:linear-gradient(135deg,#667eea,#764ba2);color:white;box-shadow:0 4px 15px rgba(102,126,234,.35);" if st.session_state.auth_tab == "login" else "background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.4);"
+            st.markdown(f"""<div onclick="document.getElementById('tab_login_radio').click()"
+                style="cursor:pointer;text-align:center;padding:9px 0;border-radius:9px;
+                font-size:0.9rem;font-weight:500;font-family:'Space Grotesk',sans-serif;
+                transition:all 0.2s;{login_style}">🔑 Sign In</div>""", unsafe_allow_html=True)
+        with tc2:
+            signup_style = "background:linear-gradient(135deg,#667eea,#764ba2);color:white;box-shadow:0 4px 15px rgba(102,126,234,.35);" if st.session_state.auth_tab == "signup" else "background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.4);"
+            st.markdown(f"""<div onclick="document.getElementById('tab_signup_radio').click()"
+                style="cursor:pointer;text-align:center;padding:9px 0;border-radius:9px;
+                font-size:0.9rem;font-weight:500;font-family:'Space Grotesk',sans-serif;
+                transition:all 0.2s;{signup_style}">✨ Create Account</div>""", unsafe_allow_html=True)
 
-        t_col1, t_col2 = st.columns(2)
-        with t_col1:
-            if st.button("🔑 Sign In", key="switch_login", use_container_width=True):
+        # Real clickable tab buttons — styled to look like the decorative ones above
+        st.markdown("""<style>
+        div[data-testid="stHorizontalBlock"] > div > div > div > button {
+            background: transparent !important;
+            border: none !important;
+            padding: 0 !important;
+            height: 0 !important;
+            min-height: 0 !important;
+            overflow: hidden !important;
+            margin: 0 !important;
+            visibility: hidden !important;
+        }
+        </style>""", unsafe_allow_html=True)
+        b1, b2 = st.columns(2)
+        with b1:
+            if st.button("login", key="tab_login_btn"):
                 st.session_state.auth_tab = "login"
                 st.rerun()
-        with t_col2:
-            if st.button("✨ Sign Up", key="switch_signup", use_container_width=True):
+        with b2:
+            if st.button("signup", key="tab_signup_btn"):
                 st.session_state.auth_tab = "signup"
                 st.rerun()
 
-        st.markdown("<div style='margin-top:1rem'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='margin-top:0.8rem'></div>", unsafe_allow_html=True)
 
         # ── LOGIN FORM ────────────────────────────────
         if st.session_state.auth_tab == "login":
