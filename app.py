@@ -300,6 +300,12 @@ if 'preview_mode' not in st.session_state:
     st.session_state.preview_mode = False
 if 'show_history' not in st.session_state:
     st.session_state.show_history = False
+if 'right_panel_open' not in st.session_state:
+    st.session_state.right_panel_open = True
+if 'user' not in st.session_state:
+    st.session_state.user = None
+if 'access_token' not in st.session_state:
+    st.session_state.access_token = None
 if 'chat_history' not in st.session_state:
     st.session_state.chat_history = []
 
@@ -467,9 +473,9 @@ def train_model_section(df, prompt):
                 # ── Save model history to Supabase (if configured) ──
                 try:
                     _sb = get_supabase()
-                    if _sb and st.session_state.get("user"):
+                    if _sb:
                         _sb.table("model_history").insert({
-                            "user_id": st.session_state.user.id,
+                            "user_id": st.session_state.get("user", {}).get("id", "guest") if isinstance(st.session_state.get("user"), dict) else "guest",
                             "model_name": result["metrics"].get("model_name", "Unknown"),
                             "task_type": task_info["task_type"],
                             "target_column": task_info["target_column"],
@@ -871,6 +877,12 @@ def main():
                 deploy_to_cloud()
         st.stop()
 
+    # ── LOGIN GATE ────────────────────────────────────────────
+    if not st.session_state.get("user"):
+        from auth import login_ui
+        login_ui()
+        st.stop()
+
     # Handle footer link navigation via query params
     nav = st.query_params.get("nav", "")
     if nav == "about" and st.session_state.current_page != "about":
@@ -1020,53 +1032,118 @@ Be friendly, use simple analogies, bullet points, and always end with 1 actionab
                 st.rerun()
         st.markdown("---")
 
-    # ── MAIN CONTENT + RIGHT SIDEBAR ──────────────────────────
-    main_col, right_col = st.columns([4.5, 1])
+    # ── MAIN CONTENT + COLLAPSIBLE RIGHT PANEL ───────────────
+    panel_open = st.session_state.right_panel_open
+    if panel_open:
+        main_col, right_col = st.columns([4.2, 1.3])
+    else:
+        main_col, right_col = st.columns([5.4, 0.12])
 
-    # ── RIGHT SIDEBAR (Pratik's feature: user info + model history) ──
+    # ── COLLAPSIBLE RIGHT PANEL ────────────────────────────────
     with right_col:
-        st.markdown("### 👤 User")
-        if st.session_state.get("user"):
-            st.write(st.session_state.user.email)
-            st.caption("● Online")
-        else:
-            st.caption("● Guest")
-        st.markdown("---")
+        toggle_label = "»" if not panel_open else "«"
+        if st.button(toggle_label, key="panel_toggle_btn", help="Toggle user panel"):
+            st.session_state.right_panel_open = not panel_open
+            st.rerun()
 
-        if st.button("📜 History", key="history_toggle_btn", use_container_width=True):
-            st.session_state.show_history = not st.session_state.show_history
+        if panel_open:
+            st.markdown("---")
+            user = st.session_state.get("user")
+            if user:
+                name = ""
+                try:
+                    meta = getattr(user, "user_metadata", {}) or {}
+                    name = meta.get("full_name", "")
+                except Exception:
+                    pass
+                email_str = getattr(user, "email", "")
+                name_display = name if name else "User"
+                st.markdown(
+                    f"<div style='background:rgba(102,126,234,0.1);border:1px solid rgba(102,126,234,0.2);"
+                    f"border-radius:10px;padding:10px 12px;margin-bottom:8px;'>"
+                    f"<div style='font-size:0.85rem;font-weight:600;color:#a78bfa;margin-bottom:2px;'>"
+                    f"👤 {name_display}</div>"
+                    f"<div style='font-size:0.72rem;color:rgba(255,255,255,0.5);word-break:break-all;'>{email_str}</div>"
+                    f"<div style='font-size:0.7rem;color:#4ade80;margin-top:4px;'>● Online</div>"
+                    f"</div>",
+                    unsafe_allow_html=True
+                )
 
-        if st.session_state.show_history:
-            st.markdown("#### Model History")
+            st.markdown(
+                "<div style='font-size:0.8rem;font-weight:600;color:rgba(255,255,255,0.6);"
+                "text-transform:uppercase;letter-spacing:1px;margin:8px 0 6px;'>📜 My Models</div>",
+                unsafe_allow_html=True
+            )
+
+            if st.button("🔄 Refresh", key="history_refresh_btn", use_container_width=True):
+                st.rerun()
+
             try:
                 _sb = get_supabase()
                 if _sb and st.session_state.get("user"):
+                    _uid = getattr(st.session_state.user, "id", "")
                     resp = _sb.table("model_history") \
                         .select("*") \
-                        .eq("user_id", st.session_state.user.id) \
+                        .eq("user_id", _uid) \
                         .order("timestamp", desc=True) \
+                        .limit(20) \
                         .execute()
                     history = resp.data
                     if history:
                         for item in history:
-                            label = f"{item['model_name']} | {item['target_column']}"
-                            st.caption(f"🔹 {label}")
-                            st.caption(f"_{item.get('task_type','')} — {item.get('timestamp','')[:10]}_")
+                            acc = item.get("accuracy", "")
+                            try:
+                                acc_display = f"{float(acc):.2%}" if acc and acc not in ("", "None") else "—"
+                            except Exception:
+                                acc_display = acc or "—"
+                            task_type = item.get("task_type", "")
+                            task_icon = "🔵" if task_type == "classification" else "🟢" if task_type == "regression" else "🟡"
+                            date_str = (item.get("timestamp", "") or "")[:10]
+                            model_name = item.get("model_name", "Unknown")
+                            target_col = item.get("target_column", "—")
+                            st.markdown(
+                                f"<div style='background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);"
+                                f"border-radius:8px;padding:8px 10px;margin-bottom:6px;'>"
+                                f"<div style='font-size:0.78rem;font-weight:600;color:rgba(255,255,255,0.85);"
+                                f"white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'>"
+                                f"{task_icon} {model_name}</div>"
+                                f"<div style='font-size:0.7rem;color:rgba(255,255,255,0.4);margin-top:3px;'>"
+                                f"🎯 {target_col} &nbsp;|&nbsp; 📊 {acc_display}</div>"
+                                f"<div style='font-size:0.68rem;color:rgba(255,255,255,0.3);margin-top:2px;'>{date_str}</div>"
+                                f"</div>",
+                                unsafe_allow_html=True
+                            )
                     else:
-                        st.info("No history yet")
+                        st.markdown(
+                            "<div style='font-size:0.78rem;color:rgba(255,255,255,0.3);text-align:center;"
+                            "padding:1rem 0;'>No models yet.<br>Train your first model!</div>",
+                            unsafe_allow_html=True
+                        )
                 else:
-                    st.info("Connect Supabase to see history")
-            except Exception as e:
-                st.error(f"Could not load history: {e}")
+                    st.markdown(
+                        "<div style='font-size:0.75rem;color:rgba(255,255,255,0.3);'>⚠️ Supabase not connected</div>",
+                        unsafe_allow_html=True
+                    )
+            except Exception as _e:
+                st.caption(f"History error: {_e}")
 
-        st.markdown("---")
-        if st.session_state.get("user"):
+            st.markdown("---")
             if st.button("🚪 Logout", key="logout_btn", use_container_width=True):
-                st.session_state.clear()
+                _sb2 = get_supabase()
+                try:
+                    if _sb2:
+                        _sb2.auth.sign_out()
+                except Exception:
+                    pass
+                for _k in ["user", "access_token", "model_trained", "model_result",
+                           "uploaded_data", "mode", "website_zip_path", "preview_html",
+                           "chat_history", "show_history"]:
+                    st.session_state.pop(_k, None)
                 st.rerun()
 
     # ── MAIN CONTENT — PAGE ROUTER ─────────────────────────────
     with main_col:
+
         if st.session_state.current_page == "about":
             show_about_page()
 
