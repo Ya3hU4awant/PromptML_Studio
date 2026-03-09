@@ -1035,67 +1035,47 @@ Be friendly, use simple analogies, bullet points, and always end with 1 actionab
         st.markdown("---")
 
     # ── MAIN CONTENT + COLLAPSIBLE RIGHT PANEL ───────────────
-    # CSS — pin the « button at top so it stays parallel to chatbot
+    panel_open = st.session_state.right_panel_open
+
+    # Style the toggle button to sit fixed at top-right like the chatbot chevron
     st.markdown("""
     <style>
-    /* Right panel toggle button — fixed position matching chatbot << */
-    div[data-testid="column"]:last-child > div:first-child > div:first-child > div > div > button[kind="secondary"] {
+    /* Target the LAST column's first button — the toggle */
+    section.main > div.block-container div[data-testid="stHorizontalBlock"]
+        > div:last-child button:first-of-type {
         position: fixed !important;
-        top: 3.5rem !important;
-        right: 0.4rem !important;
+        top: 0.75rem !important;
+        right: 0.6rem !important;
         z-index: 999 !important;
-        width: 2rem !important;
-        height: 2rem !important;
+        width: 2.2rem !important;
+        height: 2.2rem !important;
+        min-height: 2.2rem !important;
         padding: 0 !important;
-        font-size: 0.9rem !important;
-        border-radius: 6px !important;
-        background: rgba(102,126,234,0.15) !important;
-        border: 1px solid rgba(102,126,234,0.3) !important;
-        color: #a78bfa !important;
-        min-height: unset !important;
+        font-size: 1.1rem !important;
+        line-height: 1 !important;
+        border-radius: 50% !important;
+        background: rgba(102,126,234,0.18) !important;
+        border: 1px solid rgba(102,126,234,0.35) !important;
+        color: #c4b5fd !important;
+        box-shadow: none !important;
+        transition: background 0.2s !important;
     }
-    div[data-testid="column"]:last-child > div:first-child > div:first-child > div > div > button[kind="secondary"]:hover {
-        background: rgba(102,126,234,0.3) !important;
+    section.main > div.block-container div[data-testid="stHorizontalBlock"]
+        > div:last-child button:first-of-type:hover {
+        background: rgba(102,126,234,0.35) !important;
     }
     </style>
     """, unsafe_allow_html=True)
 
-    panel_open = st.session_state.right_panel_open
     if panel_open:
         main_col, right_col = st.columns([4.2, 1.3])
     else:
-        main_col, right_col = st.columns([5.4, 0.12])
+        main_col, right_col = st.columns([5.45, 0.1])
 
     # ── COLLAPSIBLE RIGHT PANEL ────────────────────────────────
     with right_col:
-        # Fixed-position toggle button — always visible, parallel to chatbot «
-        st.markdown(f"""
-        <style>
-        #panel-toggle-wrap {{
-            position: fixed;
-            top: 3.5rem;
-            right: 0.5rem;
-            z-index: 1000;
-        }}
-        div[data-testid="stButton"][key="panel_toggle_btn"] button,
-        button[data-testid="panel_toggle_btn"] {{
-            position: fixed !important;
-            top: 3.5rem !important;
-            right: 0.5rem !important;
-            z-index: 1000 !important;
-            width: 2rem !important;
-            min-height: 2rem !important;
-            padding: 0 !important;
-            font-size: 1rem !important;
-            border-radius: 6px !important;
-            background: rgba(102,126,234,0.15) !important;
-            border: 1px solid rgba(102,126,234,0.3) !important;
-            color: #a78bfa !important;
-        }}
-        </style>
-        """, unsafe_allow_html=True)
         toggle_label = "»" if not panel_open else "«"
-        if st.button(toggle_label, key="panel_toggle_btn", help="Toggle user panel"):
+        if st.button(toggle_label, key="panel_toggle_btn"):
             st.session_state.right_panel_open = not panel_open
             st.rerun()
 
