@@ -474,16 +474,18 @@ def train_model_section(df, prompt):
                 try:
                     _sb = get_supabase()
                     if _sb:
+                        _user = st.session_state.get("user")
+                        _uid = getattr(_user, "id", None) or "guest"
                         _sb.table("model_history").insert({
-                            "user_id": st.session_state.get("user", {}).get("id", "guest") if isinstance(st.session_state.get("user"), dict) else "guest",
+                            "user_id": _uid,
                             "model_name": result["metrics"].get("model_name", "Unknown"),
                             "task_type": task_info["task_type"],
                             "target_column": task_info["target_column"],
                             "accuracy": str(result["metrics"].get("accuracy") or result["metrics"].get("r2_score", "")),
                             "timestamp": datetime.utcnow().isoformat()
                         }).execute()
-                except Exception:
-                    pass  # History save is optional — never crash the app
+                except Exception as _hist_err:
+                    st.warning(f"⚠️ History save failed: {_hist_err}")
             except Exception as e:
                 st.error(f"❌ Error during model training: {str(e)}")
                 st.exception(e)
@@ -1033,6 +1035,31 @@ Be friendly, use simple analogies, bullet points, and always end with 1 actionab
         st.markdown("---")
 
     # ── MAIN CONTENT + COLLAPSIBLE RIGHT PANEL ───────────────
+    # CSS — pin the « button at top so it stays parallel to chatbot
+    st.markdown("""
+    <style>
+    /* Right panel toggle button — fixed position matching chatbot << */
+    div[data-testid="column"]:last-child > div:first-child > div:first-child > div > div > button[kind="secondary"] {
+        position: fixed !important;
+        top: 3.5rem !important;
+        right: 0.4rem !important;
+        z-index: 999 !important;
+        width: 2rem !important;
+        height: 2rem !important;
+        padding: 0 !important;
+        font-size: 0.9rem !important;
+        border-radius: 6px !important;
+        background: rgba(102,126,234,0.15) !important;
+        border: 1px solid rgba(102,126,234,0.3) !important;
+        color: #a78bfa !important;
+        min-height: unset !important;
+    }
+    div[data-testid="column"]:last-child > div:first-child > div:first-child > div > div > button[kind="secondary"]:hover {
+        background: rgba(102,126,234,0.3) !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
     panel_open = st.session_state.right_panel_open
     if panel_open:
         main_col, right_col = st.columns([4.2, 1.3])
@@ -1041,6 +1068,32 @@ Be friendly, use simple analogies, bullet points, and always end with 1 actionab
 
     # ── COLLAPSIBLE RIGHT PANEL ────────────────────────────────
     with right_col:
+        # Fixed-position toggle button — always visible, parallel to chatbot «
+        st.markdown(f"""
+        <style>
+        #panel-toggle-wrap {{
+            position: fixed;
+            top: 3.5rem;
+            right: 0.5rem;
+            z-index: 1000;
+        }}
+        div[data-testid="stButton"][key="panel_toggle_btn"] button,
+        button[data-testid="panel_toggle_btn"] {{
+            position: fixed !important;
+            top: 3.5rem !important;
+            right: 0.5rem !important;
+            z-index: 1000 !important;
+            width: 2rem !important;
+            min-height: 2rem !important;
+            padding: 0 !important;
+            font-size: 1rem !important;
+            border-radius: 6px !important;
+            background: rgba(102,126,234,0.15) !important;
+            border: 1px solid rgba(102,126,234,0.3) !important;
+            color: #a78bfa !important;
+        }}
+        </style>
+        """, unsafe_allow_html=True)
         toggle_label = "»" if not panel_open else "«"
         if st.button(toggle_label, key="panel_toggle_btn", help="Toggle user panel"):
             st.session_state.right_panel_open = not panel_open
