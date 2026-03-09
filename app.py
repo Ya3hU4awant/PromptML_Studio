@@ -21,6 +21,18 @@ warnings.filterwarnings('ignore')
 
 sys.path.append(str(Path(__file__).parent))
 
+# ── Supabase Client (optional — only active if env vars set) ──────
+def get_supabase():
+    try:
+        from supabase import create_client
+        url = os.environ.get("SUPABASE_URL") or st.secrets.get("SUPABASE_URL", "")
+        key = os.environ.get("SUPABASE_KEY") or st.secrets.get("SUPABASE_KEY", "")
+        if url and key:
+            return create_client(url, key)
+    except Exception:
+        pass
+    return None
+
 from backend.ml_engine.prompt_parser import PromptParser
 from backend.ml_engine.model_builder import ModelBuilder
 from backend.ml_engine.report_generator import ReportGenerator
@@ -286,6 +298,8 @@ if 'uploaded_data' not in st.session_state:
     st.session_state.uploaded_data = None
 if 'preview_mode' not in st.session_state:
     st.session_state.preview_mode = False
+if 'show_history' not in st.session_state:
+    st.session_state.show_history = False
 if 'chat_history' not in st.session_state:
     st.session_state.chat_history = []
 
@@ -341,7 +355,11 @@ def show_mode_selector():
 
 def upload_data_section():
     st.markdown("### 📊 Upload Your Dataset")
-    uploaded_file = st.file_uploader("Drag and drop your CSV file here", type=['csv'])
+    uploaded_file = st.file_uploader(
+        "Drag and drop your file here",
+        type=['csv', 'xlsx', 'xls', 'txt'],
+        help="Supports CSV, Excel (.xlsx/.xls), and TXT (tab-separated)"
+    )
     col1, col2 = st.columns(2)
     with col1:
         if st.button("📝 Use House Prices Sample", width='stretch'):
@@ -361,7 +379,13 @@ def upload_data_section():
                 st.rerun()
     if uploaded_file is not None:
         try:
-            df = pd.read_csv(uploaded_file)
+            fname = uploaded_file.name.lower()
+            if fname.endswith('.xlsx') or fname.endswith('.xls'):
+                df = pd.read_excel(uploaded_file)
+            elif fname.endswith('.txt'):
+                df = pd.read_csv(uploaded_file, sep=None, engine='python')
+            else:
+                df = pd.read_csv(uploaded_file)
             st.session_state.uploaded_data = df
             st.success(f"✅ File uploaded! {len(df)} rows, {len(df.columns)} columns")
             with st.expander("📋 Data Preview", expanded=True):
@@ -440,6 +464,20 @@ def train_model_section(df, prompt):
                 progress_bar.progress(100)
                 st.success("🎉 Model trained successfully!")
                 st.balloons()
+                # ── Save model history to Supabase (if configured) ──
+                try:
+                    _sb = get_supabase()
+                    if _sb and st.session_state.get("user"):
+                        _sb.table("model_history").insert({
+                            "user_id": st.session_state.user.id,
+                            "model_name": result["metrics"].get("model_name", "Unknown"),
+                            "task_type": task_info["task_type"],
+                            "target_column": task_info["target_column"],
+                            "accuracy": str(result["metrics"].get("accuracy") or result["metrics"].get("r2_score", "")),
+                            "timestamp": datetime.utcnow().isoformat()
+                        }).execute()
+                except Exception:
+                    pass  # History save is optional — never crash the app
             except Exception as e:
                 st.error(f"❌ Error during model training: {str(e)}")
                 st.exception(e)
@@ -982,60 +1020,107 @@ Be friendly, use simple analogies, bullet points, and always end with 1 actionab
                 st.rerun()
         st.markdown("---")
 
-    # ── MAIN CONTENT — PAGE ROUTER ────────────────────────────
-    if st.session_state.current_page == "about":
-        show_about_page()
+    # ── MAIN CONTENT + RIGHT SIDEBAR ──────────────────────────
+    main_col, right_col = st.columns([4.5, 1])
 
-    elif st.session_state.current_page == "how_it_works":
-        show_how_it_works_page()
+    # ── RIGHT SIDEBAR (Pratik's feature: user info + model history) ──
+    with right_col:
+        st.markdown("### 👤 User")
+        if st.session_state.get("user"):
+            st.write(st.session_state.user.email)
+            st.caption("● Online")
+        else:
+            st.caption("● Guest")
+        st.markdown("---")
 
-    elif st.session_state.current_page == "features":
-        show_features_page()
-    
-    elif st.session_state.current_page == "contact":
-        show_contact_page()
+        if st.button("📜 History", key="history_toggle_btn", use_container_width=True):
+            st.session_state.show_history = not st.session_state.show_history
 
-    elif st.session_state.current_page == "privacy":
-        show_privacy_page()
-
-    elif st.session_state.mode is None:
-        show_hero_section()
-        show_mode_selector()
-
-    else:
-        st.title(f"{'📱 No-Code' if st.session_state.mode == 'no-code' else '💻 Developer'} Mode")
-        df = upload_data_section()
-        if df is not None:
-            prompt = prompt_input_section()
-            if prompt:
-                train_model_section(df, prompt)
-                if st.session_state.mode == "no-code":
-                    show_results_no_code()
+        if st.session_state.show_history:
+            st.markdown("#### Model History")
+            try:
+                _sb = get_supabase()
+                if _sb and st.session_state.get("user"):
+                    resp = _sb.table("model_history") \
+                        .select("*") \
+                        .eq("user_id", st.session_state.user.id) \
+                        .order("timestamp", desc=True) \
+                        .execute()
+                    history = resp.data
+                    if history:
+                        for item in history:
+                            label = f"{item['model_name']} | {item['target_column']}"
+                            st.caption(f"🔹 {label}")
+                            st.caption(f"_{item.get('task_type','')} — {item.get('timestamp','')[:10]}_")
+                    else:
+                        st.info("No history yet")
                 else:
-                    show_results_developer()
+                    st.info("Connect Supabase to see history")
+            except Exception as e:
+                st.error(f"Could not load history: {e}")
 
-                from backend.ml_engine.website_generator import generate_website, generate_preview_html
-                if st.session_state.get("model_trained"):
-                    st.markdown("---")
-                    st.subheader("🌍 Deploy as Website")
-                    if st.button("🚀 Build Website", type="primary", width='stretch'):
-                        with st.spinner("Generating website..."):
-                            zip_path = generate_website()
-                            st.session_state["website_zip_path"] = zip_path
-                            import joblib as _jl
-                            _features = _jl.load("artifacts/features.pkl")
-                            _task_type = _jl.load("artifacts/task_type.pkl")
-                            st.session_state["preview_html"] = generate_preview_html(_features, _task_type)
-                    if st.session_state.get("website_zip_path"):
-                        st.success("✅ Website generated successfully!")
-                        btn_col1, btn_col2 = st.columns(2)
-                        with btn_col1:
-                            with open(st.session_state["website_zip_path"], "rb") as f:
-                                st.download_button("⬇️ Download Website ZIP", f, file_name="promptml_website.zip", mime="application/zip", width='stretch')
-                        with btn_col2:
-                            if st.button("👁️ Preview / Deploy", width='stretch'):
-                                st.session_state.preview_mode = True
-                                st.rerun()
+        st.markdown("---")
+        if st.session_state.get("user"):
+            if st.button("🚪 Logout", key="logout_btn", use_container_width=True):
+                st.session_state.clear()
+                st.rerun()
+
+    # ── MAIN CONTENT — PAGE ROUTER ─────────────────────────────
+    with main_col:
+        if st.session_state.current_page == "about":
+            show_about_page()
+
+        elif st.session_state.current_page == "how_it_works":
+            show_how_it_works_page()
+
+        elif st.session_state.current_page == "features":
+            show_features_page()
+
+        elif st.session_state.current_page == "contact":
+            show_contact_page()
+
+        elif st.session_state.current_page == "privacy":
+            show_privacy_page()
+
+        elif st.session_state.mode is None:
+            show_hero_section()
+            show_mode_selector()
+
+        else:
+            st.title(f"{'📱 No-Code' if st.session_state.mode == 'no-code' else '💻 Developer'} Mode")
+            df = upload_data_section()
+            if df is not None:
+                prompt = prompt_input_section()
+                if prompt:
+                    train_model_section(df, prompt)
+                    if st.session_state.mode == "no-code":
+                        show_results_no_code()
+                    else:
+                        show_results_developer()
+
+                    from backend.ml_engine.website_generator import generate_website, generate_preview_html
+                    if st.session_state.get("model_trained"):
+                        st.markdown("---")
+                        st.subheader("🌍 Deploy as Website")
+                        if st.button("🚀 Build Website", type="primary", width='stretch'):
+                            with st.spinner("Generating website..."):
+                                zip_path = generate_website()
+                                st.session_state["website_zip_path"] = zip_path
+                                import joblib as _jl
+                                _features = _jl.load("artifacts/features.pkl")
+                                _task_type = _jl.load("artifacts/task_type.pkl")
+                                st.session_state["preview_html"] = generate_preview_html(_features, _task_type)
+                        if st.session_state.get("website_zip_path"):
+                            st.success("✅ Website generated successfully!")
+                            btn_col1, btn_col2 = st.columns(2)
+                            with btn_col1:
+                                with open(st.session_state["website_zip_path"], "rb") as f:
+                                    st.download_button("⬇️ Download Website ZIP", f, file_name="promptml_website.zip", mime="application/zip", width='stretch')
+                            with btn_col2:
+                                if st.button("👁️ Preview / Deploy", width='stretch'):
+                                    st.session_state.preview_mode = True
+                                    st.rerun()
+
 
     # ── FOOTER — always at bottom ─────────────────────────────
     show_footer()
