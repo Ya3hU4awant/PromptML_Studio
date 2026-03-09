@@ -17,10 +17,15 @@ import tempfile
 from datetime import datetime
 import warnings
 import traceback
+from supabase import create_client, Client
 warnings.filterwarnings('ignore')
 
 sys.path.append(str(Path(__file__).parent))
+# ── Supabase Client ─────────────────────────────
+SUPABASE_URL = os.environ.get("SUPABASE_URL")
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
 
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 from backend.ml_engine.prompt_parser import PromptParser
 from backend.ml_engine.model_builder import ModelBuilder
 from backend.ml_engine.report_generator import ReportGenerator
@@ -63,6 +68,10 @@ def navigate_to(page: str):
         st.session_state.mode = None
     st.rerun()
 
+# ─────────────────────────────────────────────────────────────
+# PAGE IMPORTS
+# ─────────────────────────────────────────────────────────────
+from about import show_about_page
 
 # ─────────────────────────────────────────────────────────────
 # PAGE IMPORTS
@@ -888,12 +897,52 @@ Be friendly, use simple analogies, bullet points, and always end with 1 actionab
         if st.session_state.mode:
             mode_emoji = "📱" if st.session_state.mode == "no-code" else "💻"
             st.info(f"{mode_emoji} **{st.session_state.mode.title()} Mode**")
-            if st.button("🔄 Change Mode"):
+            if st.button("🔄 Change Mode", key="change_mode_btn"):
                 st.session_state.mode = None
                 st.session_state.model_trained = False
                 st.session_state.model_result = None
                 st.rerun()
         st.markdown("---")
+     
+   
+    left_space, main_area, right_sidebar = st.columns([0.2,5,1.6])
+    
+
+#RIGHT SIDEBAR
+    with right_sidebar:
+
+        st.markdown("### 👤 User")
+
+        if "user" in st.session_state:
+            st.write(st.session_state.user.email)
+            st.caption("● Online")
+
+        st.markdown("---")
+
+    # History button
+        if st.button("📜 History", key="history_toggl_btn"):
+            st.session_state.show_history = not st.session_state.show_history
+
+    # Show history only when clicked
+        if st.session_state.show_history:
+
+            st.markdown("#### Model History")
+
+            try:
+                response = supabase.table("model_history")\
+                    .select("*")\
+                    .eq("user_id", st.session_state.user.id)\
+                    .order("timestamp", desc=True)\
+                    .execute()
+
+                history = response.data
+
+                if history:
+                    for item in history:
+
+                        label = f"{item['model_name']} | {item['target_column']}"
+
+                        st.button(label, key=f"history_{item['timestamp']}")
 
     # ── MAIN CONTENT — PAGE ROUTER ────────────────────────────
     if st.session_state.current_page == "about":
