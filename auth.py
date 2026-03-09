@@ -192,25 +192,45 @@ def login_ui():
     }
 
     /* Buttons */
-    .stButton > button {
+    /* Tab pill buttons — subtle, inactive state */
+    button[data-testid="baseButton-secondary"] {
+        background: rgba(255,255,255,0.05) !important;
+        color: rgba(255,255,255,0.45) !important;
+        border: 1px solid rgba(255,255,255,0.08) !important;
+        border-radius: 10px !important;
+        font-family: 'Space Grotesk', sans-serif !important;
+        font-weight: 500 !important;
+        font-size: 0.92rem !important;
+        padding: 0.55rem 0 !important;
+        width: 100% !important;
+        transition: all 0.2s !important;
+        box-shadow: none !important;
+    }
+    button[data-testid="baseButton-secondary"]:hover {
+        background: rgba(102,126,234,0.12) !important;
+        color: rgba(255,255,255,0.75) !important;
+        border-color: rgba(102,126,234,0.3) !important;
+    }
+    /* Action buttons — Sign In →  /  Create Account → */
+    button[data-testid="baseButton-primary"] {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
         color: white !important;
         border: none !important;
         border-radius: 12px !important;
         font-family: 'Space Grotesk', sans-serif !important;
         font-weight: 600 !important;
-        font-size: 0.95rem !important;
-        padding: 0.65rem 1.5rem !important;
+        font-size: 1rem !important;
+        padding: 0.7rem 1.5rem !important;
         letter-spacing: 0.3px !important;
         width: 100% !important;
         transition: all 0.2s !important;
-        box-shadow: 0 4px 20px rgba(102,126,234,0.3) !important;
+        box-shadow: 0 4px 20px rgba(102,126,234,0.35) !important;
     }
-    .stButton > button:hover {
-        transform: translateY(-1px) !important;
-        box-shadow: 0 8px 28px rgba(102,126,234,0.45) !important;
+    button[data-testid="baseButton-primary"]:hover {
+        transform: translateY(-2px) !important;
+        box-shadow: 0 8px 30px rgba(102,126,234,0.5) !important;
     }
-    .stButton > button:active {
+    button[data-testid="baseButton-primary"]:active {
         transform: translateY(0) !important;
     }
 
@@ -297,45 +317,50 @@ def login_ui():
         tab_login_style  = "active" if st.session_state.auth_tab == "login"  else ""
         tab_signup_style = "active" if st.session_state.auth_tab == "signup" else ""
 
-        # ── Tab bar via columns — no duplicate ──────────────────
-        tc1, tc2 = st.columns(2)
-        with tc1:
-            login_style = "background:linear-gradient(135deg,#667eea,#764ba2);color:white;box-shadow:0 4px 15px rgba(102,126,234,.35);" if st.session_state.auth_tab == "login" else "background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.4);"
-            st.markdown(f"""<div onclick="document.getElementById('tab_login_radio').click()"
-                style="cursor:pointer;text-align:center;padding:9px 0;border-radius:9px;
-                font-size:0.9rem;font-weight:500;font-family:'Space Grotesk',sans-serif;
-                transition:all 0.2s;{login_style}">🔑 Sign In</div>""", unsafe_allow_html=True)
-        with tc2:
-            signup_style = "background:linear-gradient(135deg,#667eea,#764ba2);color:white;box-shadow:0 4px 15px rgba(102,126,234,.35);" if st.session_state.auth_tab == "signup" else "background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.4);"
-            st.markdown(f"""<div onclick="document.getElementById('tab_signup_radio').click()"
-                style="cursor:pointer;text-align:center;padding:9px 0;border-radius:9px;
-                font-size:0.9rem;font-weight:500;font-family:'Space Grotesk',sans-serif;
-                transition:all 0.2s;{signup_style}">✨ Create Account</div>""", unsafe_allow_html=True)
-
-        # Real clickable tab buttons — styled to look like the decorative ones above
-        st.markdown("""<style>
-        div[data-testid="stHorizontalBlock"] > div > div > div > button {
-            background: transparent !important;
+        # ── Tab switcher — styled pill buttons, no hidden duplicates ──
+        st.markdown("""
+        <style>
+        /* Tab pill buttons */
+        div[data-testid="stHorizontalBlock"]:first-of-type button {
+            border-radius: 10px !important;
+            font-family: 'Space Grotesk', sans-serif !important;
+            font-size: 0.92rem !important;
+            font-weight: 500 !important;
+            padding: 0.55rem 0 !important;
             border: none !important;
-            padding: 0 !important;
-            height: 0 !important;
-            min-height: 0 !important;
-            overflow: hidden !important;
-            margin: 0 !important;
-            visibility: hidden !important;
+            width: 100% !important;
+            transition: all 0.2s !important;
         }
-        </style>""", unsafe_allow_html=True)
-        b1, b2 = st.columns(2)
-        with b1:
-            if st.button("login", key="tab_login_btn"):
-                st.session_state.auth_tab = "login"
-                st.rerun()
-        with b2:
-            if st.button("signup", key="tab_signup_btn"):
-                st.session_state.auth_tab = "signup"
-                st.rerun()
+        </style>
+        """, unsafe_allow_html=True)
 
-        st.markdown("<div style='margin-top:0.8rem'></div>", unsafe_allow_html=True)
+        pill1, pill2 = st.columns(2)
+        with pill1:
+            is_login = st.session_state.auth_tab == "login"
+            if is_login:
+                st.markdown("""<div style="background:linear-gradient(135deg,#667eea,#764ba2);
+                    color:white;text-align:center;padding:10px 0;border-radius:10px;
+                    font-size:0.92rem;font-weight:600;font-family:'Space Grotesk',sans-serif;
+                    box-shadow:0 4px 15px rgba(102,126,234,0.4);letter-spacing:0.3px;">
+                    🔑 Sign In</div>""", unsafe_allow_html=True)
+            else:
+                if st.button("🔑 Sign In", key="tab_login_btn", use_container_width=True):
+                    st.session_state.auth_tab = "login"
+                    st.rerun()
+        with pill2:
+            is_signup = st.session_state.auth_tab == "signup"
+            if is_signup:
+                st.markdown("""<div style="background:linear-gradient(135deg,#667eea,#764ba2);
+                    color:white;text-align:center;padding:10px 0;border-radius:10px;
+                    font-size:0.92rem;font-weight:600;font-family:'Space Grotesk',sans-serif;
+                    box-shadow:0 4px 15px rgba(102,126,234,0.4);letter-spacing:0.3px;">
+                    ✨ Create Account</div>""", unsafe_allow_html=True)
+            else:
+                if st.button("✨ Create Account", key="tab_signup_btn", use_container_width=True):
+                    st.session_state.auth_tab = "signup"
+                    st.rerun()
+
+        st.markdown("<div style='margin-top:1rem'></div>", unsafe_allow_html=True)
 
         # ── LOGIN FORM ────────────────────────────────
         if st.session_state.auth_tab == "login":
@@ -343,7 +368,7 @@ def login_ui():
             password = st.text_input("Password",      placeholder="••••••••",           key="login_password", type="password")
             st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
 
-            if st.button("Sign In →", key="login_btn", use_container_width=True):
+            if st.button("Sign In →", key="login_btn", use_container_width=True, type="primary"):
                 if not email or not password:
                     st.error("Please fill in both fields.")
                 else:
@@ -381,7 +406,7 @@ def login_ui():
             confirm  = st.text_input("Confirm Password", placeholder="••••••••",          key="signup_confirm",   type="password")
             st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
 
-            if st.button("Create Account →", key="signup_btn", use_container_width=True):
+            if st.button("Create Account →", key="signup_btn", use_container_width=True, type="primary"):
                 if not name or not email or not password or not confirm:
                     st.error("Please fill in all fields.")
                 elif len(password) < 6:
