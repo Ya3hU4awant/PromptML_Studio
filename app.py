@@ -17,15 +17,10 @@ import tempfile
 from datetime import datetime
 import warnings
 import traceback
-from supabase import create_client, Client
 warnings.filterwarnings('ignore')
 
 sys.path.append(str(Path(__file__).parent))
-# ── Supabase Client ─────────────────────────────
-SUPABASE_URL = os.environ.get("SUPABASE_URL")
-SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
 
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 from backend.ml_engine.prompt_parser import PromptParser
 from backend.ml_engine.model_builder import ModelBuilder
 from backend.ml_engine.report_generator import ReportGenerator
@@ -68,10 +63,6 @@ def navigate_to(page: str):
         st.session_state.mode = None
     st.rerun()
 
-# ─────────────────────────────────────────────────────────────
-# PAGE IMPORTS
-# ─────────────────────────────────────────────────────────────
-from about import show_about_page
 
 # ─────────────────────────────────────────────────────────────
 # PAGE IMPORTS
@@ -293,6 +284,8 @@ if 'model_result' not in st.session_state:
     st.session_state.model_result = None
 if 'uploaded_data' not in st.session_state:
     st.session_state.uploaded_data = None
+if 'preview_mode' not in st.session_state:
+    st.session_state.preview_mode = False
 if 'chat_history' not in st.session_state:
     st.session_state.chat_history = []
 
@@ -447,10 +440,11 @@ def train_model_section(df, prompt):
                 progress_bar.progress(100)
                 st.success("🎉 Model trained successfully!")
                 st.balloons()
-
             except Exception as e:
                 st.error(f"❌ Error during model training: {str(e)}")
                 st.exception(e)
+
+
 def show_results_no_code():
     if not st.session_state.model_trained or st.session_state.model_result is None:
         return
@@ -673,6 +667,65 @@ def show_results_developer():
 # ─────────────────────────────────────────────────────────────
 # FOOTER
 # ─────────────────────────────────────────────────────────────
+def run_generated_app():
+    """Run the generated application preview."""
+    if st.session_state.get("preview_html"):
+        import streamlit.components.v1 as components
+        components.html(st.session_state["preview_html"], height=700, scrolling=True)
+    else:
+        st.warning("⚠️ Preview not generated. Please build the website first in the 'Deploy as Website' section.")
+
+
+def deploy_to_cloud():
+    """Step-by-step Streamlit Cloud deployment guide."""
+    st.markdown("### ☁️ Deploy Your ML App — Free & Live in 2 Minutes")
+    st.caption("Streamlit Cloud gives you a **free public URL** — no credit card, no server setup.")
+    st.markdown("---")
+    with st.expander("✅ Step 1 — Download the Website ZIP", expanded=True):
+        st.markdown("""
+        - Go back to the **Studio** and click **⬇️ Download Website ZIP**
+        - Extract the ZIP — you'll see these files:
+        """)
+        st.code("""
+app.py               ← Your prediction app
+model.pkl            ← Trained ML model
+requirements.txt     ← Python dependencies
+runtime.txt          ← Pins Python 3.11
+.python-version      ← Pins Python 3.11 (for uv installer)
+README.md            ← Full deploy instructions
+        """)
+    with st.expander("✅ Step 2 — Push to GitHub (2 mins)", expanded=True):
+        st.markdown("""
+        1. Go to [github.com](https://github.com) → sign in (or create free account)
+        2. Click **+** → **New Repository**
+        3. Name it anything (e.g. `my-ml-app`) → set to **Public** → **Create**
+        4. Click **Add file → Upload files** → drag all extracted files → **Commit**
+        """)
+        st.info("💡 No Git or terminal needed — just drag and drop in the browser!")
+    with st.expander("✅ Step 3 — Deploy on Streamlit Cloud (1 min)", expanded=True):
+        st.markdown("""
+        1. Go to [share.streamlit.io](https://share.streamlit.io) → **Sign in with GitHub**
+        2. Click **New app**
+        3. Select your repo and set **Main file path** to `app.py`
+        4. Click **Advanced settings** → set **Python version to 3.11** ⚠️ Mandatory
+        5. Click **Deploy!**
+        """)
+        st.success("🎉 That's it! Your app will be live at a URL like:")
+        st.code("https://your-username-my-ml-app-app-xxxxx.streamlit.app")
+        st.markdown("Share this link with **anyone** — they can use your model from any device!")
+    with st.expander("⚠️ Common Issues & Fixes"):
+        st.markdown("""
+        | Problem | Fix |
+        |---|---|
+        | `No module named 'pycaret'` | Advanced settings → Python 3.11 not set. Go to ⋮ → Settings → Advanced → Python 3.11 → Reboot |
+        | Build fails on Streamlit Cloud | Make sure all files including `runtime.txt` and `.python-version` are uploaded |
+        | `model.pkl` not found error | Re-upload — GitHub sometimes skips large files |
+        | App shows dependency error | Don't edit `requirements.txt` — it has all pinned versions |
+        | Repo must be Public | Streamlit Cloud free tier only supports public repos |
+        """)
+        st.markdown("Still stuck? Ask the **PromptML AI Assistant** in the sidebar!")
+
+
 def show_footer():
     """Footer with working About navigation button styled as a link"""
     
@@ -753,6 +806,33 @@ def show_footer():
 # ─────────────────────────────────────────────────────────────
 def main():
 
+    # ── SESSION STATE ──────────────────────────────────────────
+    if "preview_mode" not in st.session_state:
+        st.session_state.preview_mode = False
+
+    # ==============================
+    # FULL SCREEN PREVIEW MODE
+    # ==============================
+    if st.session_state.preview_mode:
+        st.markdown("""
+            <style>
+                header {visibility: hidden;}
+                footer {visibility: hidden;}
+                .block-container {padding-top: 1rem;}
+            </style>
+        """, unsafe_allow_html=True)
+        run_generated_app()
+        st.divider()
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("⬅ Back to Studio", use_container_width=True):
+                st.session_state.preview_mode = False
+                st.rerun()
+        with col2:
+            if st.button("☁️ Deploy to Streamlit Cloud", use_container_width=True, type="primary"):
+                deploy_to_cloud()
+        st.stop()
+
     # Handle footer link navigation via query params
     nav = st.query_params.get("nav", "")
     if nav == "about" and st.session_state.current_page != "about":
@@ -806,8 +886,6 @@ CURRENT SESSION CONTEXT:
 Your expertise covers ML, Data Science, Python, and the PromptML Studio platform.
 Be friendly, use simple analogies, bullet points, and always end with 1 actionable tip.
 {context_block}"""
-    
-     
 
         # Prompt Refiner
         st.markdown("**✨ Prompt Refiner**")
@@ -897,52 +975,12 @@ Be friendly, use simple analogies, bullet points, and always end with 1 actionab
         if st.session_state.mode:
             mode_emoji = "📱" if st.session_state.mode == "no-code" else "💻"
             st.info(f"{mode_emoji} **{st.session_state.mode.title()} Mode**")
-            if st.button("🔄 Change Mode", key="change_mode_btn"):
+            if st.button("🔄 Change Mode"):
                 st.session_state.mode = None
                 st.session_state.model_trained = False
                 st.session_state.model_result = None
                 st.rerun()
         st.markdown("---")
-     
-   
-    left_space, main_area, right_sidebar = st.columns([0.2,5,1.6])
-    
-
-#RIGHT SIDEBAR
-    with right_sidebar:
-
-        st.markdown("### 👤 User")
-
-        if "user" in st.session_state:
-            st.write(st.session_state.user.email)
-            st.caption("● Online")
-
-        st.markdown("---")
-
-    # History button
-        if st.button("📜 History", key="history_toggl_btn"):
-            st.session_state.show_history = not st.session_state.show_history
-
-    # Show history only when clicked
-        if st.session_state.show_history:
-
-            st.markdown("#### Model History")
-
-            try:
-                response = supabase.table("model_history")\
-                    .select("*")\
-                    .eq("user_id", st.session_state.user.id)\
-                    .order("timestamp", desc=True)\
-                    .execute()
-
-                history = response.data
-
-                if history:
-                    for item in history:
-
-                        label = f"{item['model_name']} | {item['target_column']}"
-
-                        st.button(label, key=f"history_{item['timestamp']}")
 
     # ── MAIN CONTENT — PAGE ROUTER ────────────────────────────
     if st.session_state.current_page == "about":
@@ -953,7 +991,7 @@ Be friendly, use simple analogies, bullet points, and always end with 1 actionab
 
     elif st.session_state.current_page == "features":
         show_features_page()
-
+    
     elif st.session_state.current_page == "contact":
         show_contact_page()
 
