@@ -773,73 +773,10 @@ README.md            ← Full deploy instructions
 
 
 def show_footer():
-    """Footer with working About navigation button styled as a link"""
-    
-    # Inject CSS that styles footer nav buttons to look like plain text links
-    # Scoped to buttons whose key starts with "fn_" (footer nav)
-    st.markdown("""
-    <style>
-    /* Footer nav buttons styled as plain text links — scoped via key prefix fn_ */
-    [data-testid="stButton"]:has(button[key="fn_about"]) button,
-    [data-testid="stButton"]:has(button[key="fn_how"]) button,
-    [data-testid="stButton"]:has(button[key="fn_feat"]) button,
-    [data-testid="stButton"]:has(button[key="fn_contact"]) button,
-    [data-testid="stButton"]:has(button[key="fn_privacy"]) button,
-    button[key="fn_about"], button[key="fn_how"], button[key="fn_feat"],
-    button[key="fn_contact"], button[key="fn_privacy"] {
-        background: transparent !important;
-        border: none !important;
-        color: #888 !important;
-        font-size: 0.82rem !important;
-        font-family: 'Inter', sans-serif !important;
-        font-weight: 400 !important;
-        padding: 0 !important;
-        margin: 0 0 6px 0 !important;
-        box-shadow: none !important;
-        min-height: unset !important;
-        height: auto !important;
-        line-height: 1.6 !important;
-        width: auto !important;
-        display: inline !important;
-        border-radius: 0 !important;
-        transform: none !important;
-        letter-spacing: 0 !important;
-    }
-    button[key="fn_about"]:hover, button[key="fn_how"]:hover,
-    button[key="fn_feat"]:hover, button[key="fn_contact"]:hover,
-    button[key="fn_privacy"]:hover {
-        color: #c5caff !important;
-        background: transparent !important;
-        box-shadow: none !important;
-        border: none !important;
-        transform: none !important;
-    }
-    button[key="fn_about"]:focus, button[key="fn_how"]:focus,
-    button[key="fn_feat"]:focus, button[key="fn_contact"]:focus,
-    button[key="fn_privacy"]:focus {
-        box-shadow: none !important;
-        outline: none !important;
-        border: none !important;
-        background: transparent !important;
-    }
-    /* Remove the extra stButton div padding around footer nav buttons */
-    div:has(> button[key="fn_about"]),
-    div:has(> button[key="fn_how"]),
-    div:has(> button[key="fn_feat"]),
-    div:has(> button[key="fn_contact"]),
-    div:has(> button[key="fn_privacy"]) {
-        margin: 0 !important;
-        padding: 0 !important;
-        width: fit-content !important;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-    
+    """Footer with navigation links — original HTML appearance"""
 
-    # Footer top bar
     st.markdown('<div class="pml-footer-static">', unsafe_allow_html=True)
 
-    # 4-column footer grid using Streamlit columns
     col_brand, col_platform, col_support, col_resources = st.columns([2, 1, 1, 1])
 
     with col_brand:
@@ -847,38 +784,25 @@ def show_footer():
         st.markdown('<div class="pml-footer-tagline">Democratizing AI/ML for everyone.</div>', unsafe_allow_html=True)
 
     with col_platform:
-        st.markdown("""<div style="font-family:'Inter',sans-serif;font-size:0.68rem;font-weight:600;color:#667eea;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid rgba(102,126,234,0.15);">Platform</div>""", unsafe_allow_html=True)
-        if st.button("About ›", key="fn_about"):
-            st.session_state.current_page = "about"
-            st.rerun()
-        if st.button("How It Works ›", key="fn_how"):
-            st.session_state.current_page = "how_it_works"
-            st.rerun()
-        if st.button("Features ›", key="fn_feat"):
-            st.session_state.current_page = "features"
-            st.rerun()
+        st.markdown("""<div style="font-family:'Inter',sans-serif;font-size:0.68rem;font-weight:600;color:#667eea;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid rgba(102,126,234,0.15);">Platform</div>
+<a style="display:block;font-size:0.82rem;color:#888;text-decoration:none;margin-bottom:6px;font-family:'Inter',sans-serif;cursor:pointer;" href="?nav=about" target="_self" onmouseover="this.style.color='#c5caff'" onmouseout="this.style.color='#888'">About ›</a>
+<a style="display:block;font-size:0.82rem;color:#888;text-decoration:none;margin-bottom:6px;font-family:'Inter',sans-serif;cursor:pointer;" href="?nav=how_it_works" target="_self" onmouseover="this.style.color='#c5caff'" onmouseout="this.style.color='#888'">How It Works ›</a>
+<a style="display:block;font-size:0.82rem;color:#888;text-decoration:none;margin-bottom:6px;font-family:'Inter',sans-serif;cursor:pointer;" href="?nav=features" target="_self" onmouseover="this.style.color='#c5caff'" onmouseout="this.style.color='#888'">Features ›</a>""", unsafe_allow_html=True)
 
     with col_support:
         st.markdown('<div class="pml-footer-col-title">Support</div>', unsafe_allow_html=True)
-        if st.button("Contact ›", key="fn_contact"):
-            st.session_state.current_page = "contact"
-            st.rerun()
+        st.markdown('<a style="display:block;font-size:0.82rem;color:#888;text-decoration:none;margin-bottom:6px;font-family:\'Inter\',sans-serif;cursor:pointer;" href="?nav=contact" target="_self" onmouseover="this.style.color=\'#c5caff\'" onmouseout="this.style.color=\'#888\'">Contact ›</a>', unsafe_allow_html=True)
 
     with col_resources:
         st.markdown('<div class="pml-footer-col-title">Resources</div>', unsafe_allow_html=True)
-        st.markdown('<a style="display:block;font-size:0.82rem;color:#888;text-decoration:none;margin-bottom:6px;font-family:\'Inter\',sans-serif;" href="https://github.com/Ya3hU4awant/PromptML_Studio" target="_blank">GitHub ›</a>', unsafe_allow_html=True)
-        if st.button("Privacy Policy ›", key="fn_privacy"):
-            st.session_state.current_page = "privacy"
-            st.rerun()
+        st.markdown('<a style="display:block;font-size:0.82rem;color:#888;text-decoration:none;margin-bottom:6px;font-family:\'Inter\',sans-serif;" href="https://github.com/Ya3hU4awant/PromptML_Studio" target="_blank" onmouseover="this.style.color=\'#c5caff\'" onmouseout="this.style.color=\'#888\'">GitHub ›</a>', unsafe_allow_html=True)
+        st.markdown('<a style="display:block;font-size:0.82rem;color:#888;text-decoration:none;margin-bottom:6px;font-family:\'Inter\',sans-serif;cursor:pointer;" href="?nav=privacy" target="_self" onmouseover="this.style.color=\'#c5caff\'" onmouseout="this.style.color=\'#888\'">Privacy Policy ›</a>', unsafe_allow_html=True)
 
     st.markdown('<hr class="pml-footer-divider">', unsafe_allow_html=True)
     st.markdown('<div class="pml-footer-copy">© 2026 <span>PromptML Studio</span>. All rights reserved.</div>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
 
-# ─────────────────────────────────────────────────────────────
-# MAIN
-# ─────────────────────────────────────────────────────────────
 def main():
 
     # ── SESSION STATE ──────────────────────────────────────────
@@ -907,6 +831,17 @@ def main():
             if st.button("☁️ Deploy to Streamlit Cloud", use_container_width=True, type="primary"):
                 deploy_to_cloud()
         st.stop()
+
+    # ── HANDLE FOOTER NAV QUERY PARAMS — must run BEFORE login gate ──
+    # When user clicks a footer link (?nav=about), the page reloads.
+    # We capture the nav target HERE before the login check so that
+    # even if session_state.user survived the reload, navigation works.
+    # On Streamlit Cloud, session_state persists across reruns so user stays logged in.
+    _nav = st.query_params.get("nav", "")
+    if _nav in ("about", "how_it_works", "features", "contact", "privacy"):
+        st.session_state.current_page = _nav
+        st.query_params.clear()
+        # Don't rerun here — let the rest of main() render the correct page
 
     # ── LOGIN GATE ────────────────────────────────────────────
     if not st.session_state.get("user"):
