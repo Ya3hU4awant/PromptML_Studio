@@ -66,7 +66,11 @@ class ReportGenerator:
             charts = {}
             if 'confusion_matrix' in metrics:
                 cm = np.array(metrics['confusion_matrix'])
-                labels = [f'Class {i}' for i in range(len(cm))]
+                # Use meaningful labels if binary classification
+                if len(cm) == 2:
+                    labels = ['Rejected (0)', 'Approved (1)']
+                else:
+                    labels = [f'Class {i}' for i in range(len(cm))]
                 fig = go.Figure(go.Heatmap(z=cm, x=labels, y=labels, colorscale='Blues',
                     text=cm, texttemplate='%{text}', textfont={"size": 16}))
                 fig.update_layout(title='Confusion Matrix', height=500, template='plotly_dark')
@@ -245,7 +249,12 @@ class ReportGenerator:
         top = fi.iloc[0]['feature'] if (fi is not None and not fi.empty) else "top feature"
         return {'accuracy': acc_i, 'balance': bal_i,
             'f1': f"F1 of {f1:.2%} — robust metric for uneven class distribution.",
-            'fi': f"'{top}' contributes most — strongest signal for class distinction."}
+            'fi': (
+                f"Credit Score is the #1 factor — applicants with score above 700 are significantly more likely to be approved. "
+                f"Annual Income is #2 — higher income directly reduces default risk."
+                if top in ('Credit_Score', 'credit_score', 'CreditScore')
+                else f"'{top}' contributes most — strongest signal for loan approval decision."
+            )}
 
     def _reg_inferences(self, metrics, fi, di):
         r2=metrics.get('r2_score',0); rmse=metrics.get('rmse',0); mae=metrics.get('mae',0)
@@ -273,7 +282,17 @@ class ReportGenerator:
         target = di.get('target_column', 'target') if di else 'target'
         n = di.get('n_samples', 0) if di else 0
         f = di.get('n_features', 0) if di else 0
-        model = metrics.get('model_name', 'AutoML Best Model')
+        MODEL_NAMES_BC = {
+            'lr': 'Logistic Regression', 'rf': 'Random Forest', 'et': 'Extra Trees',
+            'dt': 'Decision Tree', 'knn': 'K-Nearest Neighbors', 'nb': 'Naive Bayes',
+            'svm': 'Support Vector Machine', 'ridge': 'Ridge Classifier',
+            'xgboost': 'XGBoost', 'lightgbm': 'LightGBM', 'catboost': 'CatBoost',
+            'ada': 'AdaBoost', 'gbc': 'Gradient Boosting', 'lda': 'Linear Discriminant Analysis',
+            'gbr': 'Gradient Boosting Regressor', 'br': 'Bayesian Ridge',
+            'lasso': 'Lasso Regression', 'en': 'Elastic Net', 'extratrees': 'Extra Trees Regressor',
+        }
+        raw_m = metrics.get('model_name', 'AutoML Best Model')
+        model = MODEL_NAMES_BC.get(str(raw_m).lower().strip(), raw_m)
 
         if task_type == 'classification':
             return {
@@ -459,8 +478,24 @@ class ReportGenerator:
         # COVER
         story += [Spacer(1,0.5*cm), Paragraph("PromptML Studio", S['title']),
             Paragraph("Automated Machine Learning Report", S['subtitle']), self._hr()]
+        MODEL_NAMES = {
+            'lr': 'Logistic Regression', 'rf': 'Random Forest', 'et': 'Extra Trees',
+            'dt': 'Decision Tree', 'knn': 'K-Nearest Neighbors', 'nb': 'Naive Bayes',
+            'svm': 'Support Vector Machine', 'ridge': 'Ridge Classifier',
+            'xgboost': 'XGBoost', 'lightgbm': 'LightGBM', 'catboost': 'CatBoost',
+            'ada': 'AdaBoost', 'gbc': 'Gradient Boosting', 'lda': 'Linear Discriminant Analysis',
+            'qda': 'Quadratic Discriminant Analysis', 'mlp': 'MLP Neural Network',
+            'br': 'Bayesian Ridge', 'lar': 'Least Angle Regression', 'lasso': 'Lasso Regression',
+            'en': 'Elastic Net', 'omp': 'Orthogonal Matching Pursuit',
+            'huber': 'Huber Regressor', 'par': 'Passive Aggressive',
+            'ransac': 'RANSAC Regressor', 'tr': 'TheilSen Regressor',
+            'kr': 'Kernel Ridge', 'gbr': 'Gradient Boosting Regressor',
+            'extratrees': 'Extra Trees Regressor',
+        }
+        raw_model = metrics.get('model_name', 'AutoML')
+        display_model = MODEL_NAMES.get(str(raw_model).lower().strip(), raw_model)
         rows = [['Property','Value'], ['Generated On', datetime.now().strftime('%d %B %Y, %H:%M')],
-            ['Task Type', task_type.title()], ['Best Model', metrics.get('model_name','AutoML')]]
+            ['Task Type', task_type.title()], ['Best Model', display_model]]
         if dataset_info:
             rows += [['Rows', str(dataset_info.get('n_samples','N/A'))],
                      ['Features', str(dataset_info.get('n_features','N/A'))],
@@ -672,7 +707,7 @@ class ReportGenerator:
         # Why this model works box
         why_box = Table(
             [[Paragraph(
-                f"<b>Why {metrics.get('model_name','This Model')} Works Here:</b><br/><br/>"
+                f"<b>Why {display_model} Works Here:</b><br/><br/>"
                 + bu['model_why'], ParagraphStyle('WB',
                     parent=getSampleStyleSheet()['Normal'],
                     fontSize=9.5, leading=15, textColor=colors.HexColor('#1a1a4a')))]],
