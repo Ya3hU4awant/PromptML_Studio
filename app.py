@@ -775,44 +775,62 @@ README.md            ← Full deploy instructions
 def show_footer():
     """Footer with working About navigation button styled as a link"""
     
+    # Inject CSS that styles footer nav buttons to look like plain text links
+    # Scoped to buttons whose key starts with "fn_" (footer nav)
     st.markdown("""
     <style>
-    .footer-nav-btn > div > button,
-    .footer-nav-btn button {
+    /* Footer nav buttons styled as plain text links — scoped via key prefix fn_ */
+    [data-testid="stButton"]:has(button[key="fn_about"]) button,
+    [data-testid="stButton"]:has(button[key="fn_how"]) button,
+    [data-testid="stButton"]:has(button[key="fn_feat"]) button,
+    [data-testid="stButton"]:has(button[key="fn_contact"]) button,
+    [data-testid="stButton"]:has(button[key="fn_privacy"]) button,
+    button[key="fn_about"], button[key="fn_how"], button[key="fn_feat"],
+    button[key="fn_contact"], button[key="fn_privacy"] {
         background: transparent !important;
         border: none !important;
         color: #888 !important;
-        font-size: 0.855rem !important;
+        font-size: 0.82rem !important;
         font-family: 'Inter', sans-serif !important;
         font-weight: 400 !important;
-        padding: 0px !important;
-        margin: 0px !important;
+        padding: 0 !important;
+        margin: 0 0 6px 0 !important;
         box-shadow: none !important;
-        min-height: 0px !important;
+        min-height: unset !important;
         height: auto !important;
-        line-height: 1.5 !important;
+        line-height: 1.6 !important;
         width: auto !important;
-        text-decoration: underline !important;
-        text-decoration-color: rgba(102,126,234,0.4) !important;
-        text-underline-offset: 3px !important;
-        border-radius: 0px !important;
+        display: inline !important;
+        border-radius: 0 !important;
         transform: none !important;
+        letter-spacing: 0 !important;
     }
-    .footer-nav-btn > div > button:hover,
-    .footer-nav-btn button:hover {
+    button[key="fn_about"]:hover, button[key="fn_how"]:hover,
+    button[key="fn_feat"]:hover, button[key="fn_contact"]:hover,
+    button[key="fn_privacy"]:hover {
         color: #c5caff !important;
         background: transparent !important;
         box-shadow: none !important;
         border: none !important;
         transform: none !important;
-        text-decoration-color: #667eea !important;
     }
-    .footer-nav-btn > div > button:focus,
-    .footer-nav-btn button:focus {
+    button[key="fn_about"]:focus, button[key="fn_how"]:focus,
+    button[key="fn_feat"]:focus, button[key="fn_contact"]:focus,
+    button[key="fn_privacy"]:focus {
         box-shadow: none !important;
         outline: none !important;
         border: none !important;
         background: transparent !important;
+    }
+    /* Remove the extra stButton div padding around footer nav buttons */
+    div:has(> button[key="fn_about"]),
+    div:has(> button[key="fn_how"]),
+    div:has(> button[key="fn_feat"]),
+    div:has(> button[key="fn_contact"]),
+    div:has(> button[key="fn_privacy"]) {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: fit-content !important;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -830,34 +848,28 @@ def show_footer():
 
     with col_platform:
         st.markdown("""<div style="font-family:'Inter',sans-serif;font-size:0.68rem;font-weight:600;color:#667eea;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid rgba(102,126,234,0.15);">Platform</div>""", unsafe_allow_html=True)
-        st.markdown('<div class="footer-nav-btn">', unsafe_allow_html=True)
-        if st.button("About ›", key="footer_about"):
+        if st.button("About ›", key="fn_about"):
             st.session_state.current_page = "about"
             st.rerun()
-        if st.button("How It Works ›", key="footer_how"):
+        if st.button("How It Works ›", key="fn_how"):
             st.session_state.current_page = "how_it_works"
             st.rerun()
-        if st.button("Features ›", key="footer_features"):
+        if st.button("Features ›", key="fn_feat"):
             st.session_state.current_page = "features"
             st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
 
     with col_support:
         st.markdown('<div class="pml-footer-col-title">Support</div>', unsafe_allow_html=True)
-        st.markdown('<div class="footer-nav-btn">', unsafe_allow_html=True)
-        if st.button("Contact ›", key="footer_contact"):
+        if st.button("Contact ›", key="fn_contact"):
             st.session_state.current_page = "contact"
             st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
 
     with col_resources:
         st.markdown('<div class="pml-footer-col-title">Resources</div>', unsafe_allow_html=True)
         st.markdown('<a style="display:block;font-size:0.82rem;color:#888;text-decoration:none;margin-bottom:6px;font-family:\'Inter\',sans-serif;" href="https://github.com/Ya3hU4awant/PromptML_Studio" target="_blank">GitHub ›</a>', unsafe_allow_html=True)
-        st.markdown('<div class="footer-nav-btn">', unsafe_allow_html=True)
-        if st.button("Privacy Policy ›", key="footer_privacy"):
+        if st.button("Privacy Policy ›", key="fn_privacy"):
             st.session_state.current_page = "privacy"
             st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown('<hr class="pml-footer-divider">', unsafe_allow_html=True)
     st.markdown('<div class="pml-footer-copy">© 2026 <span>PromptML Studio</span>. All rights reserved.</div>', unsafe_allow_html=True)
@@ -895,14 +907,6 @@ def main():
             if st.button("☁️ Deploy to Streamlit Cloud", use_container_width=True, type="primary"):
                 deploy_to_cloud()
         st.stop()
-
-    # ── QUERY PARAM NAV — must run BEFORE login gate so href links don't wipe session ──
-    # (footer now uses st.button, but kept as safety net for direct URL access)
-    nav = st.query_params.get("nav", "")
-    if nav in ("about", "how_it_works", "features", "contact", "privacy"):
-        st.session_state.current_page = nav
-        st.query_params.clear()
-        st.rerun()
 
     # ── LOGIN GATE ────────────────────────────────────────────
     if not st.session_state.get("user"):
