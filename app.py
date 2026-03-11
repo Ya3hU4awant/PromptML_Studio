@@ -773,23 +773,99 @@ README.md            ← Full deploy instructions
 
 
 def show_footer():
+    # ── CSS: make .ftr-btn buttons look like plain text links ──
+    st.markdown("""
+    <style>
+    .ftr-btn > div > button,
+    .ftr-btn button {
+        background:    transparent !important;
+        border:        none        !important;
+        box-shadow:    none        !important;
+        color:         #888888     !important;
+        font-size:     0.82rem     !important;
+        font-family:   'Inter', sans-serif !important;
+        font-weight:   400         !important;
+        padding:       0           !important;
+        margin:        0 0 6px 0   !important;
+        min-height:    0           !important;
+        height:        auto        !important;
+        line-height:   1.6         !important;
+        width:         auto        !important;
+        display:       inline-block !important;
+        border-radius: 0           !important;
+        text-align:    left        !important;
+        text-decoration: none      !important;
+        letter-spacing: 0          !important;
+        transform:     none        !important;
+    }
+    .ftr-btn > div > button:hover,
+    .ftr-btn button:hover {
+        color:         #c5caff     !important;
+        background:    transparent !important;
+        box-shadow:    none        !important;
+        border:        none        !important;
+        transform:     none        !important;
+    }
+    .ftr-btn > div > button:focus,
+    .ftr-btn button:focus,
+    .ftr-btn > div > button:active,
+    .ftr-btn button:active {
+        color:         #c5caff     !important;
+        background:    transparent !important;
+        box-shadow:    none        !important;
+        border:        none        !important;
+        outline:       none        !important;
+    }
+    /* Remove Streamlit wrapper spacing */
+    .ftr-btn,
+    .ftr-btn > div { margin:0 !important; padding:0 !important; }
+    </style>
+    """, unsafe_allow_html=True)
+
     st.markdown('<div class="pml-footer-static">', unsafe_allow_html=True)
     col_brand, col_platform, col_support, col_resources = st.columns([2, 1, 1, 1])
+
     with col_brand:
         st.markdown('<div class="pml-footer-logo">🤖 PromptML Studio</div>', unsafe_allow_html=True)
         st.markdown('<div class="pml-footer-tagline">Democratizing AI/ML for everyone.</div>', unsafe_allow_html=True)
+
     with col_platform:
-        st.markdown('<div style="font-family:Inter,sans-serif;font-size:0.68rem;font-weight:600;color:#667eea;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid rgba(102,126,234,0.15);">Platform</div>', unsafe_allow_html=True)
-        st.markdown('<a href="?nav=about" target="_self" style="display:block;font-size:0.82rem;color:#888;text-decoration:none;margin-bottom:6px;font-family:Inter,sans-serif;cursor:pointer;">About ›</a>', unsafe_allow_html=True)
-        st.markdown('<a href="?nav=how_it_works" target="_self" style="display:block;font-size:0.82rem;color:#888;text-decoration:none;margin-bottom:6px;font-family:Inter,sans-serif;cursor:pointer;">How It Works ›</a>', unsafe_allow_html=True)
-        st.markdown('<a href="?nav=features" target="_self" style="display:block;font-size:0.82rem;color:#888;text-decoration:none;margin-bottom:6px;font-family:Inter,sans-serif;cursor:pointer;">Features ›</a>', unsafe_allow_html=True)
+        st.markdown('''<div style="font-family:Inter,sans-serif;font-size:0.68rem;font-weight:600;
+            color:#667eea;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:10px;
+            padding-bottom:6px;border-bottom:1px solid rgba(102,126,234,0.15);">Platform</div>''',
+            unsafe_allow_html=True)
+        st.markdown('<div class="ftr-btn">', unsafe_allow_html=True)
+        if st.button("About ›", key="fn_about"):
+            st.session_state.current_page = "about"; st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown('<div class="ftr-btn">', unsafe_allow_html=True)
+        if st.button("How It Works ›", key="fn_how"):
+            st.session_state.current_page = "how_it_works"; st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown('<div class="ftr-btn">', unsafe_allow_html=True)
+        if st.button("Features ›", key="fn_feat"):
+            st.session_state.current_page = "features"; st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+
     with col_support:
         st.markdown('<div class="pml-footer-col-title">Support</div>', unsafe_allow_html=True)
-        st.markdown('<a href="?nav=contact" target="_self" style="display:block;font-size:0.82rem;color:#888;text-decoration:none;margin-bottom:6px;font-family:Inter,sans-serif;cursor:pointer;">Contact ›</a>', unsafe_allow_html=True)
+        st.markdown('<div class="ftr-btn">', unsafe_allow_html=True)
+        if st.button("Contact ›", key="fn_contact"):
+            st.session_state.current_page = "contact"; st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+
     with col_resources:
         st.markdown('<div class="pml-footer-col-title">Resources</div>', unsafe_allow_html=True)
-        st.markdown('<a href="https://github.com/Ya3hU4awant/PromptML_Studio" target="_blank" style="display:block;font-size:0.82rem;color:#888;text-decoration:none;margin-bottom:6px;font-family:Inter,sans-serif;">GitHub ›</a>', unsafe_allow_html=True)
-        st.markdown('<a href="?nav=privacy" target="_self" style="display:block;font-size:0.82rem;color:#888;text-decoration:none;margin-bottom:6px;font-family:Inter,sans-serif;cursor:pointer;">Privacy Policy ›</a>', unsafe_allow_html=True)
+        st.markdown('''<a href="https://github.com/Ya3hU4awant/PromptML_Studio" target="_blank"
+            style="display:block;font-size:0.82rem;color:#888;text-decoration:none;
+            margin-bottom:6px;font-family:Inter,sans-serif;"
+            onmouseover="this.style.color='#c5caff'"
+            onmouseout="this.style.color='#888'">GitHub ›</a>''', unsafe_allow_html=True)
+        st.markdown('<div class="ftr-btn">', unsafe_allow_html=True)
+        if st.button("Privacy Policy ›", key="fn_privacy"):
+            st.session_state.current_page = "privacy"; st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+
     st.markdown('<hr class="pml-footer-divider">', unsafe_allow_html=True)
     st.markdown('<div class="pml-footer-copy">© 2026 <span>PromptML Studio</span>. All rights reserved.</div>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
