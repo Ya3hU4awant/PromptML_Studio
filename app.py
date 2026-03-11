@@ -773,54 +773,7 @@ README.md            ← Full deploy instructions
 
 
 def show_footer():
-    # ── CSS: make .ftr-btn buttons look like plain text links ──
-    st.markdown("""
-    <style>
-    .ftr-btn > div > button,
-    .ftr-btn button {
-        background:    transparent !important;
-        border:        none        !important;
-        box-shadow:    none        !important;
-        color:         #888888     !important;
-        font-size:     0.82rem     !important;
-        font-family:   'Inter', sans-serif !important;
-        font-weight:   400         !important;
-        padding:       0           !important;
-        margin:        0 0 6px 0   !important;
-        min-height:    0           !important;
-        height:        auto        !important;
-        line-height:   1.6         !important;
-        width:         auto        !important;
-        display:       inline-block !important;
-        border-radius: 0           !important;
-        text-align:    left        !important;
-        text-decoration: none      !important;
-        letter-spacing: 0          !important;
-        transform:     none        !important;
-    }
-    .ftr-btn > div > button:hover,
-    .ftr-btn button:hover {
-        color:         #c5caff     !important;
-        background:    transparent !important;
-        box-shadow:    none        !important;
-        border:        none        !important;
-        transform:     none        !important;
-    }
-    .ftr-btn > div > button:focus,
-    .ftr-btn button:focus,
-    .ftr-btn > div > button:active,
-    .ftr-btn button:active {
-        color:         #c5caff     !important;
-        background:    transparent !important;
-        box-shadow:    none        !important;
-        border:        none        !important;
-        outline:       none        !important;
-    }
-    /* Remove Streamlit wrapper spacing */
-    .ftr-btn,
-    .ftr-btn > div { margin:0 !important; padding:0 !important; }
-    </style>
-    """, unsafe_allow_html=True)
+    """Footer nav — st.buttons restyled to look like plain text links via JS"""
 
     st.markdown('<div class="pml-footer-static">', unsafe_allow_html=True)
     col_brand, col_platform, col_support, col_resources = st.columns([2, 1, 1, 1])
@@ -834,25 +787,17 @@ def show_footer():
             color:#667eea;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:10px;
             padding-bottom:6px;border-bottom:1px solid rgba(102,126,234,0.15);">Platform</div>''',
             unsafe_allow_html=True)
-        st.markdown('<div class="ftr-btn">', unsafe_allow_html=True)
         if st.button("About ›", key="fn_about"):
             st.session_state.current_page = "about"; st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
-        st.markdown('<div class="ftr-btn">', unsafe_allow_html=True)
         if st.button("How It Works ›", key="fn_how"):
             st.session_state.current_page = "how_it_works"; st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
-        st.markdown('<div class="ftr-btn">', unsafe_allow_html=True)
         if st.button("Features ›", key="fn_feat"):
             st.session_state.current_page = "features"; st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
 
     with col_support:
         st.markdown('<div class="pml-footer-col-title">Support</div>', unsafe_allow_html=True)
-        st.markdown('<div class="ftr-btn">', unsafe_allow_html=True)
         if st.button("Contact ›", key="fn_contact"):
             st.session_state.current_page = "contact"; st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
 
     with col_resources:
         st.markdown('<div class="pml-footer-col-title">Resources</div>', unsafe_allow_html=True)
@@ -861,14 +806,51 @@ def show_footer():
             margin-bottom:6px;font-family:Inter,sans-serif;"
             onmouseover="this.style.color='#c5caff'"
             onmouseout="this.style.color='#888'">GitHub ›</a>''', unsafe_allow_html=True)
-        st.markdown('<div class="ftr-btn">', unsafe_allow_html=True)
         if st.button("Privacy Policy ›", key="fn_privacy"):
             st.session_state.current_page = "privacy"; st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown('<hr class="pml-footer-divider">', unsafe_allow_html=True)
     st.markdown('<div class="pml-footer-copy">© 2026 <span>PromptML Studio</span>. All rights reserved.</div>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
+
+    # Use components.v1.html to run JS (st.markdown strips <script> tags)
+    # This iframe-based component can reach parent DOM via window.parent
+    import streamlit.components.v1 as _components
+    _components.html("""
+    <script>
+    (function styleFooterBtns() {
+        const LABELS = ["About \u203a", "How It Works \u203a", "Features \u203a", "Contact \u203a", "Privacy Policy \u203a"];
+        const BASE = "background:transparent!important;border:none!important;box-shadow:none!important;" +
+                     "color:#888888!important;font-size:0.82rem!important;font-family:Inter,sans-serif!important;" +
+                     "font-weight:400!important;padding:0!important;margin:0 0 4px 0!important;" +
+                     "min-height:0!important;height:auto!important;line-height:1.6!important;" +
+                     "width:auto!important;display:block!important;border-radius:0!important;" +
+                     "text-align:left!important;letter-spacing:0!important;cursor:pointer!important;" +
+                     "transform:none!important;text-decoration:none!important;";
+
+        function apply() {
+            const doc = window.parent.document;
+            doc.querySelectorAll("button").forEach(btn => {
+                if (LABELS.includes(btn.innerText.trim())) {
+                    btn.style.cssText = BASE;
+                    if (!btn.dataset.ftrStyled) {
+                        btn.dataset.ftrStyled = "1";
+                        btn.addEventListener("mouseover", () => { btn.style.cssText = BASE; btn.style.color = "#c5caff"; });
+                        btn.addEventListener("mouseout",  () => { btn.style.cssText = BASE; });
+                    }
+                }
+            });
+        }
+
+        apply();
+        setTimeout(apply, 100);
+        setTimeout(apply, 400);
+        setTimeout(apply, 900);
+        const observer = new MutationObserver(apply);
+        observer.observe(window.parent.document.body, { childList: true, subtree: true });
+    })();
+    </script>
+    """, height=0)
 
 
 def main():
