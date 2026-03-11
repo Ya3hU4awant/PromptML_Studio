@@ -27,10 +27,14 @@ warnings.filterwarnings("ignore")
 # ada added — light boosting, good quality
 #
 # Classification: 8 models, all memory-safe
-CLASSIFICATION_INCLUDE = ["lr", "dt", "rf", "et", "ridge", "lda", "knn", "ada"]
+# Linear models (lr, ridge, lda) removed — they use coef_ as feature importance
+# which is distorted by feature scale, giving wrong rankings (e.g. Dependents > Credit_Score)
+# Tree-based models use information gain — honest, scale-independent feature importance
+CLASSIFICATION_INCLUDE = ["dt", "rf", "et", "ada", "knn"]
 
 # Regression: 8 models, all memory-safe
-REGRESSION_INCLUDE = ["lr", "dt", "rf", "et", "ridge", "lasso", "en", "knn"]
+# Linear models removed for same reason — coef_ importance is scale-distorted
+REGRESSION_INCLUDE = ["dt", "rf", "et", "ada", "knn"]
 
 
 class ModelBuilder:
@@ -375,11 +379,13 @@ class ModelBuilder:
         y_pred = predictions["prediction_label"].values
         y_true = test_labels.values
 
+        from sklearn.metrics import confusion_matrix as sk_cm
         metrics = {
-            "accuracy": round(accuracy_score(y_true, y_pred), 4),
+            "accuracy":  round(accuracy_score(y_true, y_pred), 4),
             "precision": round(precision_score(y_true, y_pred, average="weighted", zero_division=0), 4),
-            "recall": round(recall_score(y_true, y_pred, average="weighted", zero_division=0), 4),
-            "f1_score": round(f1_score(y_true, y_pred, average="weighted", zero_division=0), 4),
+            "recall":    round(recall_score(y_true, y_pred, average="weighted", zero_division=0), 4),
+            "f1_score":  round(f1_score(y_true, y_pred, average="weighted", zero_division=0), 4),
+            "confusion_matrix": sk_cm(y_true, y_pred).tolist(),
         }
         if not comparison_df.empty:
             metrics["model_name"] = comparison_df.index[0]
