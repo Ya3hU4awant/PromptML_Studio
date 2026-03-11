@@ -773,125 +773,26 @@ README.md            ← Full deploy instructions
 
 
 def show_footer():
-    """Footer — nav links look like plain text, hidden buttons handle routing"""
-
-    # CSS: make the 5 hidden nav buttons truly invisible (0 size, no space)
-    st.markdown("""
-    <style>
-    /* Hide the 5 footer nav trigger buttons completely — they are clicked by JS only */
-    div[data-testid="stButton"]:has(button:is([key="fn_about"],[key="fn_how"],[key="fn_feat"],[key="fn_contact"],[key="fn_privacy"])),
-    div[data-testid="stButton"]:has(button[data-testid="baseButton-secondary"]:where(
-        [aria-label="a"],[aria-label="b"],[aria-label="c"],[aria-label="d"],[aria-label="e"]
-    )) {
-        height: 0 !important;
-        min-height: 0 !important;
-        max-height: 0 !important;
-        width: 0 !important;
-        overflow: hidden !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        opacity: 0 !important;
-        pointer-events: none !important;
-        position: absolute !important;
-        visibility: hidden !important;
-    }
-    /* Fallback: hide any secondary button whose text is a single letter a-e */
-    button[data-testid="baseButton-secondary"] {
-        /* will be overridden per-button below — just a cascade anchor */
-    }
-    </style>
-    <style id="ftr-hide">
-    /* JS will inject final hide rules after DOM ready */
-    </style>
-    <script>
-    (function hideFtrBtns() {
-        function doHide() {
-            const btns = window.parent.document.querySelectorAll(
-                'button[data-testid="baseButton-secondary"]');
-            btns.forEach(b => {
-                if (['a','b','c','d','e'].includes(b.innerText.trim())) {
-                    b.style.cssText = 'height:0!important;width:0!important;' +
-                        'overflow:hidden!important;opacity:0!important;' +
-                        'position:absolute!important;pointer-events:none!important;' +
-                        'margin:0!important;padding:0!important;min-height:0!important;';
-                    const wrap = b.closest('div[data-testid="stButton"]');
-                    if (wrap) wrap.style.cssText = b.style.cssText;
-                }
-            });
-        }
-        setTimeout(doHide, 300);
-        setTimeout(doHide, 800);
-        setTimeout(doHide, 1500);
-    })();
-    </script>
-    """, unsafe_allow_html=True)
-
     st.markdown('<div class="pml-footer-static">', unsafe_allow_html=True)
     col_brand, col_platform, col_support, col_resources = st.columns([2, 1, 1, 1])
-
     with col_brand:
         st.markdown('<div class="pml-footer-logo">🤖 PromptML Studio</div>', unsafe_allow_html=True)
         st.markdown('<div class="pml-footer-tagline">Democratizing AI/ML for everyone.</div>', unsafe_allow_html=True)
-
     with col_platform:
-        # Pure HTML links — look exactly like original, click triggers hidden st.button via JS
-        st.markdown("""
-        <div style="font-family:'Inter',sans-serif;font-size:0.68rem;font-weight:600;color:#667eea;
-            text-transform:uppercase;letter-spacing:1.2px;margin-bottom:10px;padding-bottom:6px;
-            border-bottom:1px solid rgba(102,126,234,0.15);">Platform</div>
-        <a class="ftr-link" onclick="triggerFooterNav('fn_about')" href="#">About ›</a>
-        <a class="ftr-link" onclick="triggerFooterNav('fn_how')" href="#">How It Works ›</a>
-        <a class="ftr-link" onclick="triggerFooterNav('fn_feat')" href="#">Features ›</a>
-        """, unsafe_allow_html=True)
-        if st.button("a", key="fn_about"): st.session_state.current_page = "about"; st.rerun()
-        if st.button("b", key="fn_how"):   st.session_state.current_page = "how_it_works"; st.rerun()
-        if st.button("c", key="fn_feat"):  st.session_state.current_page = "features"; st.rerun()
-
+        st.markdown('<div style="font-family:Inter,sans-serif;font-size:0.68rem;font-weight:600;color:#667eea;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid rgba(102,126,234,0.15);">Platform</div>', unsafe_allow_html=True)
+        st.markdown('<a href="?nav=about" target="_self" style="display:block;font-size:0.82rem;color:#888;text-decoration:none;margin-bottom:6px;font-family:Inter,sans-serif;cursor:pointer;">About ›</a>', unsafe_allow_html=True)
+        st.markdown('<a href="?nav=how_it_works" target="_self" style="display:block;font-size:0.82rem;color:#888;text-decoration:none;margin-bottom:6px;font-family:Inter,sans-serif;cursor:pointer;">How It Works ›</a>', unsafe_allow_html=True)
+        st.markdown('<a href="?nav=features" target="_self" style="display:block;font-size:0.82rem;color:#888;text-decoration:none;margin-bottom:6px;font-family:Inter,sans-serif;cursor:pointer;">Features ›</a>', unsafe_allow_html=True)
     with col_support:
         st.markdown('<div class="pml-footer-col-title">Support</div>', unsafe_allow_html=True)
-        st.markdown("""<a class="ftr-link" onclick="triggerFooterNav('fn_contact')" href="#">Contact ›</a>""", unsafe_allow_html=True)
-        if st.button("d", key="fn_contact"): st.session_state.current_page = "contact"; st.rerun()
-
+        st.markdown('<a href="?nav=contact" target="_self" style="display:block;font-size:0.82rem;color:#888;text-decoration:none;margin-bottom:6px;font-family:Inter,sans-serif;cursor:pointer;">Contact ›</a>', unsafe_allow_html=True)
     with col_resources:
         st.markdown('<div class="pml-footer-col-title">Resources</div>', unsafe_allow_html=True)
-        st.markdown('<a style="display:block;font-size:0.82rem;color:#888;text-decoration:none;margin-bottom:6px;font-family:\'Inter\',sans-serif;" href="https://github.com/Ya3hU4awant/PromptML_Studio" target="_blank" onmouseover="this.style.color=\'#c5caff\'" onmouseout="this.style.color=\'#888\'">GitHub ›</a>', unsafe_allow_html=True)
-        st.markdown("""<a class="ftr-link" onclick="triggerFooterNav('fn_privacy')" href="#">Privacy Policy ›</a>""", unsafe_allow_html=True)
-        if st.button("e", key="fn_privacy"): st.session_state.current_page = "privacy"; st.rerun()
-
+        st.markdown('<a href="https://github.com/Ya3hU4awant/PromptML_Studio" target="_blank" style="display:block;font-size:0.82rem;color:#888;text-decoration:none;margin-bottom:6px;font-family:Inter,sans-serif;">GitHub ›</a>', unsafe_allow_html=True)
+        st.markdown('<a href="?nav=privacy" target="_self" style="display:block;font-size:0.82rem;color:#888;text-decoration:none;margin-bottom:6px;font-family:Inter,sans-serif;cursor:pointer;">Privacy Policy ›</a>', unsafe_allow_html=True)
     st.markdown('<hr class="pml-footer-divider">', unsafe_allow_html=True)
     st.markdown('<div class="pml-footer-copy">© 2026 <span>PromptML Studio</span>. All rights reserved.</div>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
-
-    # Link styles + JS trigger function
-    st.markdown("""
-    <style>
-    a.ftr-link {
-        display: block;
-        font-size: 0.82rem;
-        color: #888;
-        text-decoration: none;
-        margin-bottom: 6px;
-        font-family: 'Inter', sans-serif;
-        cursor: pointer;
-        transition: color 0.15s;
-    }
-    a.ftr-link:hover { color: #c5caff; }
-    </style>
-    <script>
-    function triggerFooterNav(key) {
-        // Walk up from every button until we find one whose aria-label or
-        // inner data matches our key, then programmatically click it.
-        const doc = window.parent.document;
-        const buttons = doc.querySelectorAll('button[data-testid="baseButton-secondary"]');
-        // The buttons are ordered: a=about, b=how, c=feat, d=contact, e=privacy
-        const keyMap = {'fn_about': 0, 'fn_how': 1, 'fn_feat': 2, 'fn_contact': 3, 'fn_privacy': 4};
-        // Filter to only our hidden nav buttons (they have single-letter labels a-e)
-        const navBtns = Array.from(buttons).filter(b => ['a','b','c','d','e'].includes(b.innerText.trim()));
-        const idx = keyMap[key];
-        if (navBtns[idx]) { navBtns[idx].click(); }
-    }
-    </script>
-    """, unsafe_allow_html=True)
 
 
 def main():
@@ -923,16 +824,12 @@ def main():
                 deploy_to_cloud()
         st.stop()
 
-    # ── HANDLE FOOTER NAV QUERY PARAMS — must run BEFORE login gate ──
-    # When user clicks a footer link (?nav=about), the page reloads.
-    # We capture the nav target HERE before the login check so that
-    # even if session_state.user survived the reload, navigation works.
-    # On Streamlit Cloud, session_state persists across reruns so user stays logged in.
+    # ── HANDLE FOOTER NAV — BEFORE login gate so reload doesn't break session ──
     _nav = st.query_params.get("nav", "")
     if _nav in ("about", "how_it_works", "features", "contact", "privacy"):
         st.session_state.current_page = _nav
         st.query_params.clear()
-        # Don't rerun here — let the rest of main() render the correct page
+        # No rerun — fall through to login gate which sees existing user
 
     # ── LOGIN GATE ────────────────────────────────────────────
     if not st.session_state.get("user"):
