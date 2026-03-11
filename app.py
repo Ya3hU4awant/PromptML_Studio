@@ -829,18 +829,35 @@ def show_footer():
         st.markdown('<div class="pml-footer-tagline">Democratizing AI/ML for everyone.</div>', unsafe_allow_html=True)
 
     with col_platform:
-        st.markdown("""<div style="font-family:'Inter',sans-serif;font-size:0.68rem;font-weight:600;color:#667eea;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid rgba(102,126,234,0.15);">Platform</div><a style="display:block;font-size:0.82rem;color:#888;text-decoration:none;margin-bottom:6px;font-family:'Inter',sans-serif;cursor:pointer;" href="?nav=about" target="_self">About ›</a><a style="display:block;font-size:0.82rem;color:#888;text-decoration:none;margin-bottom:6px;font-family:'Inter',sans-serif;cursor:pointer;" href="?nav=how_it_works" target="_self">How It Works ›</a><a style="display:block;font-size:0.82rem;color:#888;text-decoration:none;margin-bottom:6px;font-family:'Inter',sans-serif;cursor:pointer;" href="?nav=features" target="_self">Features ›</a>""", unsafe_allow_html=True)
-
+        st.markdown("""<div style="font-family:'Inter',sans-serif;font-size:0.68rem;font-weight:600;color:#667eea;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid rgba(102,126,234,0.15);">Platform</div>""", unsafe_allow_html=True)
+        st.markdown('<div class="footer-nav-btn">', unsafe_allow_html=True)
+        if st.button("About ›", key="footer_about"):
+            st.session_state.current_page = "about"
+            st.rerun()
+        if st.button("How It Works ›", key="footer_how"):
+            st.session_state.current_page = "how_it_works"
+            st.rerun()
+        if st.button("Features ›", key="footer_features"):
+            st.session_state.current_page = "features"
+            st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
 
     with col_support:
         st.markdown('<div class="pml-footer-col-title">Support</div>', unsafe_allow_html=True)
-        st.markdown('<a style="display:block;font-size:0.82rem;color:#888;text-decoration:none;margin-bottom:6px;font-family:\'Inter\',sans-serif;" href="?nav=contact" target="_self">Contact ›</a>', unsafe_allow_html=True)
+        st.markdown('<div class="footer-nav-btn">', unsafe_allow_html=True)
+        if st.button("Contact ›", key="footer_contact"):
+            st.session_state.current_page = "contact"
+            st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
 
     with col_resources:
         st.markdown('<div class="pml-footer-col-title">Resources</div>', unsafe_allow_html=True)
         st.markdown('<a style="display:block;font-size:0.82rem;color:#888;text-decoration:none;margin-bottom:6px;font-family:\'Inter\',sans-serif;" href="https://github.com/Ya3hU4awant/PromptML_Studio" target="_blank">GitHub ›</a>', unsafe_allow_html=True)
-        st.markdown('<a style="display:block;font-size:0.82rem;color:#888;text-decoration:none;margin-bottom:6px;font-family:\'Inter\',sans-serif;" href="#">Documentation ›</a>', unsafe_allow_html=True)
-        st.markdown('<a style="display:block;font-size:0.82rem;color:#888;text-decoration:none;margin-bottom:6px;font-family:\'Inter\',sans-serif;" href="?nav=privacy" target="_self">Privacy Policy ›</a>', unsafe_allow_html=True)
+        st.markdown('<div class="footer-nav-btn">', unsafe_allow_html=True)
+        if st.button("Privacy Policy ›", key="footer_privacy"):
+            st.session_state.current_page = "privacy"
+            st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown('<hr class="pml-footer-divider">', unsafe_allow_html=True)
     st.markdown('<div class="pml-footer-copy">© 2026 <span>PromptML Studio</span>. All rights reserved.</div>', unsafe_allow_html=True)
@@ -879,37 +896,19 @@ def main():
                 deploy_to_cloud()
         st.stop()
 
+    # ── QUERY PARAM NAV — must run BEFORE login gate so href links don't wipe session ──
+    # (footer now uses st.button, but kept as safety net for direct URL access)
+    nav = st.query_params.get("nav", "")
+    if nav in ("about", "how_it_works", "features", "contact", "privacy"):
+        st.session_state.current_page = nav
+        st.query_params.clear()
+        st.rerun()
+
     # ── LOGIN GATE ────────────────────────────────────────────
     if not st.session_state.get("user"):
         from auth import login_ui
         login_ui()
         st.stop()
-
-    # Handle footer link navigation via query params
-    nav = st.query_params.get("nav", "")
-    if nav == "about" and st.session_state.current_page != "about":
-        st.session_state.current_page = "about"
-        st.query_params.clear()
-        st.rerun()
-    elif nav == "how_it_works" and st.session_state.current_page != "how_it_works":
-        st.session_state.current_page = "how_it_works"
-        st.query_params.clear()
-        st.rerun()
-    elif nav == "features" and st.session_state.current_page != "features":
-        st.session_state.current_page = "features"
-        st.query_params.clear()
-        st.rerun()
-    elif nav == "contact" and st.session_state.current_page != "contact":
-        st.session_state.current_page = "contact"
-        st.query_params.clear()
-        st.rerun()
-    elif nav == "privacy" and st.session_state.current_page != "privacy":
-        st.session_state.current_page = "privacy"
-        st.query_params.clear()
-        st.rerun()
-
-    elif nav == "" and st.session_state.current_page in ("about", "how_it_works", "features", "contact", "privacy"):
-        pass
 
     # ── SIDEBAR ───────────────────────────────────────────────
     with st.sidebar:
