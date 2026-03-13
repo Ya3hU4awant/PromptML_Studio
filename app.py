@@ -510,6 +510,9 @@ def show_results_no_code():
         st.info(f"🤖 Best Model: **{metrics.get('model_name', 'Unknown')}**")
         if metrics.get("overfitting_warning"):
             st.warning(metrics["overfitting_warning"])
+        if result.get('comparison') is not None and not result['comparison'].empty:
+            with st.expander("📊 View All Models Comparison", expanded=False):
+                st.dataframe(result['comparison'], width='stretch')
         st.markdown("### 📈 Visualizations")
         if 'feature_importance' in charts:
             st.plotly_chart(charts['feature_importance'], width='stretch')
