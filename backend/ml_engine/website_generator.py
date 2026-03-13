@@ -66,9 +66,15 @@ def generate_website(output_dir="generated_website"):
     os.makedirs(output_dir, exist_ok=True)
 
     # Load artifacts
-    model = joblib.load("artifacts/model.pkl")
-    features = joblib.load("artifacts/features.pkl")
+    model     = joblib.load("artifacts/model.pkl")
+    features  = joblib.load("artifacts/features.pkl")
     task_type = joblib.load("artifacts/task_type.pkl")
+
+    # Load categorical options (saved by model_builder)
+    try:
+        cat_options = joblib.load("artifacts/cat_options.pkl")
+    except Exception:
+        cat_options = {}
 
     # Streamlit app template (AUTO UI) — polished, judge-ready
     app_code = f"""
@@ -104,9 +110,10 @@ def load_model():
 
 model = load_model()
 
-# ── Feature list from training ────────────────────────────────
-features = {features}
-task_type = "{task_type}"
+# ── Feature config from training ──────────────────────────────
+features    = {features}
+task_type   = "{task_type}"
+cat_options = {cat_options}
 
 # ── Input form ────────────────────────────────────────────────
 st.subheader("📋 Enter Applicant Details")
@@ -116,11 +123,22 @@ def user_inputs():
     cols = st.columns(3)
     for i, col in enumerate(features):
         with cols[i % 3]:
-            data[col] = st.number_input(
-                col.replace("_", " "),
-                value=0.0,
-                format="%.4f"
-            )
+            label = col.replace("_", " ")
+            if col in cat_options:
+                # Categorical → dropdown
+                data[col] = st.selectbox(label, options=cat_options[col])
+            else:
+                # Numeric → number input with smart defaults
+                if "score" in col.lower():
+                    data[col] = st.number_input(label, value=650, step=1, format="%d")
+                elif "income" in col.lower() or "amount" in col.lower() or "debt" in col.lower():
+                    data[col] = st.number_input(label, value=500000, step=1000, format="%d")
+                elif "rate" in col.lower() or "ratio" in col.lower():
+                    data[col] = st.number_input(label, value=8.5, step=0.1, format="%.2f")
+                elif "age" in col.lower() or "year" in col.lower() or "month" in col.lower() or "loan" in col.lower():
+                    data[col] = st.number_input(label, value=5, step=1, format="%d")
+                else:
+                    data[col] = st.number_input(label, value=0, step=1, format="%d")
     return pd.DataFrame([data])
 
 df = user_inputs()
@@ -131,10 +149,9 @@ st.markdown("---")
 if st.button("🔮 Predict", use_container_width=True, type="primary"):
     with st.spinner("Running model..."):
         try:
-            # Try PyCaret predict_model first (preserves preprocessing)
             if task_type == "classification":
                 from pycaret.classification import predict_model
-                preds = predict_model(model, data=df)
+                preds  = predict_model(model, data=df)
                 result = preds["prediction_label"].iloc[0]
                 score  = preds.get("prediction_score", pd.Series([None])).iloc[0]
             else:
@@ -144,7 +161,6 @@ if st.button("🔮 Predict", use_container_width=True, type="primary"):
                 result = round(float(preds[col].iloc[0]), 4)
                 score  = None
         except Exception:
-            # Silent fallback to direct sklearn predict
             try:
                 result = model.predict(df)[0]
                 score  = None
