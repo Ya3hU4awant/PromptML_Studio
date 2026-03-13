@@ -198,8 +198,8 @@ if st.button("🔮 Predict", use_container_width=True, type="primary"):
 st.markdown("---")
 st.markdown(\"\"\"
 <p style='text-align:center;color:#555;font-size:0.75rem;'>
-    ⚡ Powered by <strong>PromptML Studio</strong> · AI Genius Internship ·
-    Model auto-selected by PyCaret AutoML
+    ⚡ Powered by <strong>PromptML Studio</strong> ··
+
 </p>
 \"\"\", unsafe_allow_html=True)
 """
