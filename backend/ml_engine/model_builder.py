@@ -189,7 +189,6 @@ class ModelBuilder:
         n_folds = min(3, max(2, len(df) // 10))
         train_size = self._get_train_size(df)
 
-        from sklearn.preprocessing import OrdinalEncoder
         self.setup_config = setup(
             data=df,
             target=target_column,
@@ -203,7 +202,6 @@ class ModelBuilder:
             pca=False,
             remove_multicollinearity=False,
             polynomial_features=False,
-            encoding_method=OrdinalEncoder(),   # Keeps original column count — no one-hot expansion
         )
 
         best_model = compare_models(
@@ -258,7 +256,6 @@ class ModelBuilder:
         n_folds = min(3, max(2, len(df) // 10))
         train_size = self._get_train_size(df)
 
-        from sklearn.preprocessing import OrdinalEncoder
         self.setup_config = setup(
             data=df,
             target=target_column,
@@ -272,7 +269,6 @@ class ModelBuilder:
             pca=False,
             remove_multicollinearity=False,
             polynomial_features=False,
-            encoding_method=OrdinalEncoder(),   # Keeps original column count — no one-hot expansion
         )
 
         best_model = compare_models(
@@ -417,35 +413,70 @@ class ModelBuilder:
 
     def _get_feature_importance(self, model, df, target_column):
         """
-        Extract feature importance using original column names.
-        This works correctly because we force OrdinalEncoder in setup(),
-        which keeps the same number of columns as the original dataframe.
-        No one-hot expansion = importances array aligns 1:1 with original features.
+        Compute feature importance INDEPENDENTLY from PyCaret using a clean
+        sklearn pipeline on the ORIGINAL data.
+
+        WHY NOT USE PYCARET'S MODEL DIRECTLY:
+        PyCaret's internal preprocessing (NaN imputation → new category string,
+        then one-hot encoding) changes the number of columns unpredictably.
+        The model's feature_importances_ array maps to TRANSFORMED columns,
+        not original column names. This causes wrong rankings on any dataset
+        that has NaN values in categorical columns (e.g. Collateral has 186 NaN).
+
+        THIS APPROACH IS SAFE FOR ALL DATASETS BECAUSE:
+        - Handles NaN in both numeric (median) and categorical (fills 'Unknown')
+        - Uses OrdinalEncoder — no column explosion, always same count as input
+        - RF for classification, ExtraTreesRegressor for regression
+        - Both are tree-based = scale-independent, honest importances
+        - Works with any number of features, any mix of types
         """
+        from sklearn.preprocessing import OrdinalEncoder
+
         feature_names = [c for c in df.columns if c != target_column]
+        task = self.task_type  # "classification" or "regression"
 
         try:
-            actual_model = model
-            if hasattr(model, "named_steps"):
-                for step in model.named_steps.values():
-                    if hasattr(step, "feature_importances_"):
-                        actual_model = step
-                        break
+            X = df[feature_names].copy()
+            y = df[target_column].copy()
 
-            if hasattr(actual_model, "feature_importances_"):
-                importances = actual_model.feature_importances_
+            # ── Step 1: Fill NaN safely ────────────────────────────────────
+            cat_cols = X.select_dtypes(include='object').columns.tolist()
+            num_cols = X.select_dtypes(exclude='object').columns.tolist()
+
+            for c in num_cols:
+                X[c] = X[c].fillna(X[c].median())
+            for c in cat_cols:
+                X[c] = X[c].fillna('Unknown')
+                X[c] = OrdinalEncoder(
+                    handle_unknown='use_encoded_value', unknown_value=-1
+                ).fit_transform(X[[c]])
+
+            # ── Step 2: Pick estimator based on task type ──────────────────
+            if task == "regression":
+                from sklearn.ensemble import ExtraTreesRegressor
+                estimator = ExtraTreesRegressor(
+                    n_estimators=100, random_state=42, n_jobs=1
+                )
             else:
-                return pd.DataFrame({
-                    "feature": feature_names,
-                    "importance": [1 / len(feature_names)] * len(feature_names),
-                })
+                # classification (default — also used as fallback)
+                from sklearn.ensemble import RandomForestClassifier
+                # For binary classification ensure y is int
+                try:
+                    y = y.astype(int)
+                except Exception:
+                    pass
+                estimator = RandomForestClassifier(
+                    n_estimators=100, random_state=42, n_jobs=1
+                )
 
-            min_len = min(len(feature_names), len(importances))
+            estimator.fit(X, y)
+
             result_df = pd.DataFrame({
-                "feature": feature_names[:min_len],
-                "importance": importances[:min_len],
+                "feature": feature_names,
+                "importance": estimator.feature_importances_,
             }).sort_values("importance", ascending=False)
 
+            # Normalise to sum = 1.0
             total = result_df["importance"].sum()
             if total > 0:
                 result_df["importance"] = (result_df["importance"] / total).round(4)
