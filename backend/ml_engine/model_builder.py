@@ -412,30 +412,112 @@ class ModelBuilder:
     # ============================================================
 
     def _get_feature_importance(self, model, df, target_column):
+        """
+        Extract feature importance using PyCaret's transformed feature names.
+
+        CRITICAL FIX: PyCaret encodes + transforms features before training.
+        The model's feature_importances_ array maps to TRANSFORMED feature names,
+        NOT original column names. If we zip importances with original names, we get
+        wrong rankings (e.g. Dependents > Credit_Score despite Credit_Score being
+        the dominant feature in the raw data).
+
+        Fix: Use get_config("X_train_transformed") to get actual feature names
+        the model was trained on, then aggregate back to original column names
+        by taking the max importance of any encoded variant of each original column.
+        """
+        original_features = [c for c in df.columns if c != target_column]
+
         try:
-            feature_names = [c for c in df.columns if c != target_column]
+            # ── Step 1: Get the raw estimator ──────────────────────────────
             actual_model = model
             if hasattr(model, "named_steps"):
-                for step in model.named_steps.values():
-                    if hasattr(step, "feature_importances_") or hasattr(step, "coef_"):
+                for step_name, step in model.named_steps.items():
+                    if hasattr(step, "feature_importances_"):
                         actual_model = step
                         break
 
-            if hasattr(actual_model, "feature_importances_"):
-                importances = actual_model.feature_importances_
-            elif hasattr(actual_model, "coef_"):
-                importances = np.abs(actual_model.coef_).flatten()
-            else:
+            if not hasattr(actual_model, "feature_importances_"):
+                # Fallback: equal weights
                 return pd.DataFrame({
-                    "feature": feature_names,
-                    "importance": [1 / len(feature_names)] * len(feature_names),
-                })
+                    "feature": original_features,
+                    "importance": [1 / len(original_features)] * len(original_features),
+                }).sort_values("importance", ascending=False)
 
-            min_len = min(len(feature_names), len(importances))
-            return pd.DataFrame({
-                "feature": feature_names[:min_len],
-                "importance": importances[:min_len],
-            }).sort_values("importance", ascending=False)
+            importances = actual_model.feature_importances_
 
-        except Exception:
+            # ── Step 2: Get transformed feature names from PyCaret ─────────
+            transformed_names = None
+            try:
+                from pycaret.classification import get_config as clf_get_config
+                X_train_t = clf_get_config("X_train_transformed")
+                transformed_names = list(X_train_t.columns)
+            except Exception:
+                pass
+
+            if transformed_names is None:
+                try:
+                    from pycaret.regression import get_config as reg_get_config
+                    X_train_t = reg_get_config("X_train_transformed")
+                    transformed_names = list(X_train_t.columns)
+                except Exception:
+                    pass
+
+            # ── Step 3: Align lengths ──────────────────────────────────────
+            if transformed_names is not None and len(transformed_names) == len(importances):
+                # Map transformed feature names back to original column names.
+                # PyCaret one-hot encodes as "ColumnName_Value" — we match by
+                # checking if transformed name starts with an original column name.
+                aggregated = {feat: 0.0 for feat in original_features}
+                unmatched_sum = 0.0
+                unmatched_count = 0
+
+                for t_name, imp in zip(transformed_names, importances):
+                    matched = False
+                    # Try exact match first
+                    if t_name in aggregated:
+                        aggregated[t_name] = max(aggregated[t_name], float(imp))
+                        matched = True
+                    else:
+                        # Try prefix match for one-hot encoded columns
+                        for orig in original_features:
+                            if t_name.startswith(orig + "_") or t_name.startswith(orig + " "):
+                                aggregated[orig] = max(aggregated[orig], float(imp))
+                                matched = True
+                                break
+                    if not matched:
+                        unmatched_sum += float(imp)
+                        unmatched_count += 1
+
+                # Distribute unmatched importance proportionally to matched features
+                total_matched = sum(aggregated.values())
+                if unmatched_sum > 0 and total_matched > 0:
+                    scale = (total_matched + unmatched_sum) / total_matched if total_matched > 0 else 1
+                    aggregated = {k: v * scale for k, v in aggregated.items()}
+
+                result_df = pd.DataFrame({
+                    "feature": list(aggregated.keys()),
+                    "importance": list(aggregated.values()),
+                }).sort_values("importance", ascending=False)
+
+                # Normalise so importances sum to 1.0
+                total = result_df["importance"].sum()
+                if total > 0:
+                    result_df["importance"] = (result_df["importance"] / total).round(4)
+
+                return result_df
+
+            else:
+                # Fallback: use min length with original names
+                min_len = min(len(original_features), len(importances))
+                result_df = pd.DataFrame({
+                    "feature": original_features[:min_len],
+                    "importance": importances[:min_len],
+                }).sort_values("importance", ascending=False)
+                total = result_df["importance"].sum()
+                if total > 0:
+                    result_df["importance"] = (result_df["importance"] / total).round(4)
+                return result_df
+
+        except Exception as e:
+            print(f"[WARN] Feature importance extraction failed: {e}")
             return pd.DataFrame(columns=["feature", "importance"])
