@@ -221,6 +221,7 @@ class ModelBuilder:
             model=self.model,
             feature_columns=[c for c in df.columns if c != target_column],
             task_type="classification",
+            df=df,
         )
 
         test_data = get_config("X_test")
@@ -288,6 +289,7 @@ class ModelBuilder:
             model=self.model,
             feature_columns=[c for c in df.columns if c != target_column],
             task_type="regression",
+            df=df,
         )
 
         test_data = get_config("X_test")
@@ -361,13 +363,22 @@ class ModelBuilder:
     # ARTIFACT SAVER
     # ============================================================
 
-    def _save_artifacts(self, model, feature_columns, task_type, scaler=None):
+    def _save_artifacts(self, model, feature_columns, task_type, scaler=None, df=None):
         os.makedirs("artifacts", exist_ok=True)
         joblib.dump(model, "artifacts/model.pkl")
         joblib.dump(feature_columns, "artifacts/features.pkl")
         joblib.dump(task_type, "artifacts/task_type.pkl")
         if scaler:
             joblib.dump(scaler, "artifacts/scaler.pkl")
+        # Save categorical column options for smart UI generation
+        if df is not None:
+            cat_options = {}
+            for col in feature_columns:
+                if col in df.columns and df[col].dtype == object:
+                    vals = sorted(df[col].dropna().unique().tolist())
+                    if vals:
+                        cat_options[col] = vals
+            joblib.dump(cat_options, "artifacts/cat_options.pkl")
 
     # ============================================================
     # METRICS
