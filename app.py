@@ -186,7 +186,7 @@ def generate_web_app_zip(model_path, feature_columns, feature_types, app_dir="te
 # PAGE CONFIG & CSS
 # ─────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="PromptML Studio",
+    page_title="PromptML Studio — AI-Powered AutoML Platform",
     page_icon="🤖",
     layout="wide",
     initial_sidebar_state="auto",
@@ -195,6 +195,11 @@ st.set_page_config(
         'Report a bug': None,
         'About': "**PromptML Studio** — Democratizing AI/ML for everyone.\n\nBuilt by Ya3hU4awant"
     }
+)
+
+st.markdown(
+    '<meta name="google-site-verification" content="pe8yCg15nhrDkEWuiCRLp7Wwq59SxbnUksxssH2gRkg" />',
+    unsafe_allow_html=True
 )
 
 def load_css():
