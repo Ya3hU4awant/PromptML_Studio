@@ -197,10 +197,17 @@ st.set_page_config(
     }
 )
 
-st.markdown(
-    '<meta name="google-site-verification" content="pe8yCg15nhrDkEWuiCRLp7Wwq59SxbnUksxssH2gRkg" />',
-    unsafe_allow_html=True
-)
+from streamlit.components.v1 import html
+
+html("""
+<script>
+  const meta = document.createElement('meta');
+  meta.name = 'google-site-verification';
+  meta.content = 'pe8yCg15nhrDkEWuiCRLp7Wwq59SxbnUksxssH2gRkg';
+  document.head.appendChild(meta);
+</script>
+""", height=0)
+
 
 def load_css():
     css_path = Path(__file__).parent / "static" / "style.css"
