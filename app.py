@@ -197,14 +197,15 @@ st.set_page_config(
     }
 )
 
-from streamlit.components.v1 import html
+from streamlit.components.v1 import html as st_html
 
-html("""
+st_html("""
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-JPNXX549HJ"></script>
 <script>
-  const meta = document.createElement('meta');
-  meta.name = 'google-site-verification';
-  meta.content = 'pe8yCg15nhrDkEWuiCRLp7Wwq59SxbnUksxssH2gRkg';
-  document.head.appendChild(meta);
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-JPNXX549HJ');
 </script>
 """, height=0)
 
