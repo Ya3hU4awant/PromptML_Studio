@@ -464,7 +464,11 @@ def train_model_section(df, prompt):
                 )
                 result['charts'] = charts
                 from backend.ml_engine.model_persistence import save_artifacts
-                features = df.drop(columns=[task_info['target_column']]).columns.tolist()
+                # Clustering has no target column — drop only if target exists
+                if task_info['target_column']:
+                    features = df.drop(columns=[task_info['target_column']]).columns.tolist()
+                else:
+                    features = df.select_dtypes(include=["int64","float64"]).columns.tolist()
                 save_artifacts(model=result['model'], feature_columns=features, task_type=task_info['task_type'])
                 progress_bar.progress(90)
                 status_text.text("✅ Model training complete!")
