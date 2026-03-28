@@ -464,7 +464,11 @@ def train_model_section(df, prompt):
                 )
                 result['charts'] = charts
                 from backend.ml_engine.model_persistence import save_artifacts
-                features = df.drop(columns=[task_info['target_column']]).columns.tolist()
+                # Clustering has no target column — drop only if target exists
+                if task_info['target_column']:
+                    features = df.drop(columns=[task_info['target_column']]).columns.tolist()
+                else:
+                    features = df.select_dtypes(include=["int64","float64"]).columns.tolist()
                 save_artifacts(model=result['model'], feature_columns=features, task_type=task_info['task_type'])
                 progress_bar.progress(90)
                 status_text.text("✅ Model training complete!")
@@ -1072,7 +1076,7 @@ Be friendly, use simple analogies, bullet points, and always end with 1 actionab
     else:
         main_col, right_col = st.columns([5.45, 0.1])
 
-    # ── COLLAPSIBLE RIGHT PANEL ────────────────────────────────
+    # ── COLLAPSIBLE RIGHT PANEL ─────────────────────────────-----
     with right_col:
         toggle_label = "»" if not panel_open else "«"
         if st.button(toggle_label, key="panel_toggle_btn"):
