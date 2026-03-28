@@ -1076,7 +1076,7 @@ Be friendly, use simple analogies, bullet points, and always end with 1 actionab
     else:
         main_col, right_col = st.columns([5.45, 0.1])
 
-    # ── COLLAPSIBLE RIGHT PANEL ────────────────────────────────
+    # ── COLLAPSIBLE RIGHT PANEL ─────────────────────────────-----
     with right_col:
         toggle_label = "»" if not panel_open else "«"
         if st.button(toggle_label, key="panel_toggle_btn"):
