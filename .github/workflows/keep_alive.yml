@@ -1,0 +1,16 @@
+name: Keep PromptML Studio Alive
+
+on:
+  schedule:
+    - cron: '*/20 * * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping PromptML Studio
+        run: |
+          curl -s -o /dev/null -w "%{http_code}" \
+          https://promptmlstudio.streamlit.app
+          echo "App pinged successfully"
