@@ -2,15 +2,29 @@ name: Keep PromptML Studio Alive
 
 on:
   schedule:
-    - cron: '*/20 * * * *'
+    - cron: '0 * * * *'    # every hour
+    - cron: '30 * * * *'   # every hour at :30 — so effectively every 30 minutes
   workflow_dispatch:
 
 jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
-      - name: Ping PromptML Studio
+      - name: Wake up PromptML Studio
         run: |
-          curl -s -o /dev/null -w "%{http_code}" \
-          https://promptmlstudio.streamlit.app
-          echo "App pinged successfully"
+          # Simulate a real browser visit with headers
+          curl -s -o /dev/null -w "HTTP Status: %{http_code}\n" \
+            -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36" \
+            -H "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" \
+            -H "Accept-Language: en-US,en;q=0.5" \
+            -H "Connection: keep-alive" \
+            -L \
+            https://promptmlstudio.streamlit.app
+          echo "Ping 1 done"
+          sleep 5
+          # Second request to simulate user staying on page
+          curl -s -o /dev/null -w "HTTP Status: %{http_code}\n" \
+            -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36" \
+            -L \
+            https://promptmlstudio.streamlit.app/_stcore/health
+          echo "Health check done"
