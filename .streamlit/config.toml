@@ -1,14 +1,21 @@
 [theme]
-primaryColor = "#FF4B4B"
+primaryColor = "#667eea"
 backgroundColor = "#0E1117"
-secondaryBackgroundColor = "#262730"
+secondaryBackgroundColor = "#13132a"
 textColor = "#FAFAFA"
 font = "sans serif"
 
 [server]
 headless = true
 enableCORS = false
-port = 8501
+enableWebsocketCompression = true
 
 [browser]
 gatherUsageStats = false
+
+[runner]
+fastReruns = true
+
+[client]
+showErrorDetails = false
+toolbarMode = "minimal"

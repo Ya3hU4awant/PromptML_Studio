@@ -68,7 +68,27 @@ class Predictor:
             df = data.copy()
         else:
             raise ValueError("Data must be DataFrame, dict, or list")
-        
+
+        # ================= IRIS DATA FIX =================
+
+        # Drop target column if present
+        if 'Species' in df.columns:
+            df = df.drop(columns=['Species'])
+
+        # Ensure correct feature order (as used in training)
+        expected_cols = [
+            'Id',
+            'SepalLengthCm',
+            'SepalWidthCm',
+            'PetalLengthCm',
+            'PetalWidthCm'
+        ]
+
+        # Keep only required columns in correct order
+        df = df[expected_cols]
+
+        # =================================================
+
         # Make predictions using PyCaret
         try:
             # Try PyCaret prediction first
